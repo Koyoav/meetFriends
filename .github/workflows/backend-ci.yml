@@ -53,5 +53,5 @@ jobs:
           PYTHONPATH: .
         run: alembic upgrade head
 
-      - name: Run tests
+      - name: Run tests with 100% coverage gate
         run: pytest -v

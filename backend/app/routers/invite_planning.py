@@ -1,12 +1,13 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
+from app.dal import friends as friends_dal
+from app.dal import gatherings as gatherings_dal
 from app.database import get_db
-from app.models import Friend, FriendGatheringType, Gathering, GatheringTypeLabel, User
+from app.models import User
 from app.schemas.invite_planning import (
     GatheringTypeFilter,
     InvitePlanningItem,
@@ -16,17 +17,6 @@ from app.services.reminders import days_since
 from app.services.scoring import compute_combined_score
 
 router = APIRouter(prefix="/invite-planning", tags=["invite-planning"])
-
-
-def _last_gathering_date(
-    db: Session, friend_id: int, gathering_type: GatheringTypeFilter
-) -> date | None:
-    query = db.query(func.max(Gathering.date)).filter(Gathering.friend_id == friend_id)
-    if gathering_type != GatheringTypeFilter.ALL:
-        query = query.join(Gathering.gathering_type).filter(
-            FriendGatheringType.type == GatheringTypeLabel(gathering_type.value)
-        )
-    return query.scalar()
 
 
 _SORT_KEYS = {
@@ -50,12 +40,14 @@ def invite_planning(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[InvitePlanningItem]:
-    friends = db.query(Friend).filter(Friend.household_id == current_user.household_id).all()
+    friends = friends_dal.list_friends(db, current_user.household_id)
 
     today = date.today()
     items = []
     for friend in friends:
-        last_date = _last_gathering_date(db, friend.id, gathering_type)
+        last_date = gatherings_dal.get_last_gathering_date_for_friend(
+            db, friend.id, gathering_type
+        )
         items.append(
             InvitePlanningItem(
                 friend_id=friend.id,

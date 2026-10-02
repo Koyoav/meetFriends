@@ -1,13 +1,15 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
+from app.dal import friends as friends_dal
+from app.dal import gatherings as gatherings_dal
 from app.database import get_db
-from app.models import Friend, FriendGatheringType, User
+from app.models import FriendGatheringType, User
 from app.schemas.reminder import ReminderItem
-from app.services.reminders import days_since, last_gathering_dates
+from app.services.reminders import days_since
 
 router = APIRouter(prefix="/reminders", tags=["reminders"])
 
@@ -26,15 +28,10 @@ def _sort_key(item: ReminderItem) -> tuple[int, int]:
 def list_reminders(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> list[ReminderItem]:
-    friends = (
-        db.query(Friend)
-        .options(joinedload(Friend.gathering_types))
-        .filter(Friend.household_id == current_user.household_id)
-        .all()
-    )
+    friends = friends_dal.list_friends(db, current_user.household_id)
 
     gathering_type_ids = [gt.id for friend in friends for gt in friend.gathering_types]
-    last_dates = last_gathering_dates(db, gathering_type_ids)
+    last_dates = gatherings_dal.get_last_gathering_dates_by_type(db, gathering_type_ids)
 
     today = date.today()
     items: list[ReminderItem] = []
@@ -45,7 +42,9 @@ def list_reminders(
             overdue = elapsed is None or elapsed > gathering_type.reminder_threshold_days
             if not overdue:
                 continue
-            days_overdue = None if elapsed is None else elapsed - gathering_type.reminder_threshold_days
+            days_overdue = (
+                None if elapsed is None else elapsed - gathering_type.reminder_threshold_days
+            )
             items.append(
                 ReminderItem(
                     friend_id=friend.id,

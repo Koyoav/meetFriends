@@ -4,6 +4,15 @@ import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '../auth
 // for a device/simulator that can't reach localhost (e.g. Android emulator: 10.0.2.2).
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
 
+// Lets AuthContext know the refresh token was rejected, so it can flip isSignedIn
+// back to false instead of leaving the app stranded on an authenticated screen
+// with every subsequent request 401ing. Set once by AuthProvider on mount.
+let onSessionExpired: (() => void) | null = null;
+
+export function setSessionExpiredHandler(handler: (() => void) | null): void {
+  onSessionExpired = handler;
+}
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
@@ -46,13 +55,27 @@ async function rawRequest(path: string, options: RequestOptions, accessToken: st
   return response;
 }
 
-async function refreshAccessToken(): Promise<string | null> {
+// Shared by every in-flight request that hits a 401 at the same time, so a page that
+// fires several authenticated calls at once performs one /auth/refresh, not one per call.
+let refreshInFlight: Promise<string | null> | null = null;
+
+function refreshAccessToken(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefreshAccessToken().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+async function doRefreshAccessToken(): Promise<string | null> {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) return null;
 
   const response = await rawRequest('/auth/refresh', { method: 'POST', body: { refresh_token: refreshToken } }, null);
   if (!response.ok) {
     await clearTokens();
+    onSessionExpired?.();
     return null;
   }
 

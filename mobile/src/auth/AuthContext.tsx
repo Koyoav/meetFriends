@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import * as authApi from '../api/auth';
+import { setSessionExpiredHandler } from '../api/client';
 import { clearTokens, getAccessToken, setTokens } from './tokenStorage';
 
 type AuthContextValue = {
@@ -21,6 +22,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getAccessToken()
       .then((token) => setIsSignedIn(token !== null))
       .finally(() => setIsLoading(false));
+
+    // When the API client's refresh attempt is rejected (expired/invalidated refresh
+    // token), fall back to the signed-out stack instead of leaving the app stuck on an
+    // authenticated screen where every request just 401s again.
+    setSessionExpiredHandler(() => setIsSignedIn(false));
+    return () => setSessionExpiredHandler(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(

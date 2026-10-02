@@ -92,15 +92,22 @@ async function doRefreshAccessToken(): Promise<string | null> {
   // don't let this stale result write to or clear it again.
   if (generationAtStart !== authGeneration) return null;
 
-  // Treat a malformed 2xx body (missing either token) the same as a rejected refresh,
-  // rather than letting a partial write leave an unusable refresh_token in storage, or
-  // `data.access_token` throw a TypeError that would bypass the ApiError path callers
-  // already handle (e.g. LoginScreen/SignupScreen's `instanceof ApiError` check).
-  if (!response.ok || !data?.access_token || !data?.refresh_token) {
+  // Only a 401 (see backend/app/routers/auth.py's refresh(): invalid/expired/unknown
+  // refresh token) means the refresh token itself is actually dead — sign out. A 5xx or
+  // other transient failure here says nothing about the refresh token's validity, so
+  // leave stored tokens alone and let the next 401 retry the refresh.
+  if (response.status === 401) {
     await clearTokens();
     onSessionExpired?.();
     return null;
   }
+
+  // Treat a malformed 2xx body (missing either token) the same as an unusable
+  // response, rather than letting a partial write leave an unusable refresh_token in
+  // storage, or `data.access_token` throw a TypeError that would bypass the ApiError
+  // path callers already handle (e.g. LoginScreen/SignupScreen's `instanceof ApiError`
+  // check).
+  if (!response.ok || !data?.access_token || !data?.refresh_token) return null;
 
   await setTokens(data.access_token, data.refresh_token);
   return data.access_token;

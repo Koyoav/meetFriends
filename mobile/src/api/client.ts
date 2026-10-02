@@ -1,0 +1,81 @@
+import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '../auth/tokenStorage';
+
+// Points at the FastAPI backend (see ../../backend). Override via EXPO_PUBLIC_API_URL
+// for a device/simulator that can't reach localhost (e.g. Android emulator: 10.0.2.2).
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
+
+export class ApiError extends Error {
+  status: number;
+  detail: unknown;
+
+  constructor(status: number, detail: unknown) {
+    super(typeof detail === 'string' ? detail : `Request failed with status ${status}`);
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+type RequestOptions = {
+  method?: string;
+  body?: unknown;
+  auth?: boolean;
+};
+
+async function parseBody(response: Response) {
+  const text = await response.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function rawRequest(path: string, options: RequestOptions, accessToken: string | null) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (options.auth && accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  });
+
+  return response;
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) return null;
+
+  const response = await rawRequest('/auth/refresh', { method: 'POST', body: { refresh_token: refreshToken } }, null);
+  if (!response.ok) {
+    await clearTokens();
+    return null;
+  }
+
+  const data = await parseBody(response);
+  await setTokens(data.access_token, data.refresh_token);
+  return data.access_token;
+}
+
+/** Calls the backend. Retries once with a refreshed access token on a 401 when `auth` is set. */
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const accessToken = options.auth ? await getAccessToken() : null;
+  let response = await rawRequest(path, options, accessToken);
+
+  if (response.status === 401 && options.auth) {
+    const newAccessToken = await refreshAccessToken();
+    if (newAccessToken) {
+      response = await rawRequest(path, options, newAccessToken);
+    }
+  }
+
+  const data = await parseBody(response);
+  if (!response.ok) {
+    throw new ApiError(response.status, data?.detail ?? data);
+  }
+  return data as T;
+}

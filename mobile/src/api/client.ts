@@ -89,13 +89,17 @@ async function doRefreshAccessToken(): Promise<string | null> {
   // Storage was already cleared by that path; don't let this stale result undo it.
   if (generationAtStart !== authGeneration) return null;
 
-  if (!response.ok) {
+  const data = await parseBody(response);
+
+  // Treat a malformed 2xx body the same as a rejected refresh, rather than letting
+  // `data.access_token` throw a TypeError that would bypass the ApiError path callers
+  // already handle (e.g. LoginScreen/SignupScreen's `instanceof ApiError` check).
+  if (!response.ok || data?.access_token === undefined) {
     await clearTokens();
     onSessionExpired?.();
     return null;
   }
 
-  const data = await parseBody(response);
   await setTokens(data.access_token, data.refresh_token);
   return data.access_token;
 }

@@ -9,14 +9,15 @@ FastAPI + MySQL backend for the MeetFriends app. See
 docker compose up --build
 ```
 
-This starts MySQL and the API at http://localhost:8000. On first run, apply
-migrations:
+This starts MySQL and the API at http://localhost:8080 (mapped from the
+container's internal port 8000 to avoid clashing with other local services).
+On first run, apply migrations:
 
 ```
 docker compose exec backend alembic upgrade head
 ```
 
-API docs: http://localhost:8000/docs
+API docs: http://localhost:8080/docs
 
 ## Running without Docker
 

@@ -10,8 +10,10 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.dal import households as households_dal
+from app.dal import users as users_dal
 from app.database import get_db
-from app.models import Household, User
+from app.models import User
 from app.schemas.auth import (
     InviteRequest,
     LoginRequest,
@@ -32,24 +34,15 @@ def _issue_tokens(user_id: int) -> TokenResponse:
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def signup(payload: SignupRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    if db.query(User).filter(User.email == payload.email).first():
+    if users_dal.get_user_by_email(db, payload.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
 
-    household = Household(name=payload.household_name)
-    db.add(household)
-    db.flush()
-
-    user = User(
-        household_id=household.id,
-        email=payload.email,
-        password_hash=hash_password(payload.password),
-        name=payload.name,
+    household = households_dal.create_household(db, payload.household_name)
+    user = users_dal.create_user(
+        db, household.id, payload.email, hash_password(payload.password), payload.name
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
 
     return _issue_tokens(user.id)
 
@@ -60,27 +53,25 @@ def invite_household_member(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> TokenResponse:
-    if db.query(User).filter(User.email == payload.email).first():
+    if users_dal.get_user_by_email(db, payload.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
 
-    user = User(
-        household_id=current_user.household_id,
-        email=payload.email,
-        password_hash=hash_password(payload.password),
-        name=payload.name,
+    user = users_dal.create_user(
+        db,
+        current_user.household_id,
+        payload.email,
+        hash_password(payload.password),
+        payload.name,
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
 
     return _issue_tokens(user.id)
 
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    user = db.query(User).filter(User.email == payload.email).first()
+    user = users_dal.get_user_by_email(db, payload.email)
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
@@ -101,7 +92,7 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResp
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )
 
-    user = db.get(User, user_id)
+    user = users_dal.get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"

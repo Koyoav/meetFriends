@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
+from app.dal import people as people_dal
 from app.database import get_db
 from app.models import User
 from app.schemas.birthday import BirthdayItem
-from app.services.birthdays import birthdays_for_month
+from app.services.birthdays import compute_birthday_items
 
 router = APIRouter(prefix="/birthdays", tags=["birthdays"])
 
@@ -19,4 +20,5 @@ def list_birthdays(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     target_month = month or date.today().month
-    return birthdays_for_month(db, current_user.household_id, target_month)
+    people = people_dal.list_with_birth_month(db, current_user.household_id, target_month)
+    return compute_birthday_items(people)

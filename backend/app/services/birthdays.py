@@ -1,25 +1,10 @@
 from datetime import date
 
-from sqlalchemy.orm import Session
-
-from app.models import Friend, Person
+from app.models import Person
 
 
-def birthdays_for_month(
-    db: Session, household_id: int, month: int, today: date | None = None
-) -> list[dict]:
+def compute_birthday_items(people: list[Person], today: date | None = None) -> list[dict]:
     today = today or date.today()
-    people = (
-        db.query(Person)
-        .join(Person.friend)
-        .filter(
-            Friend.household_id == household_id,
-            Person.birth_month == month,
-            Person.birth_day.isnot(None),
-        )
-        .all()
-    )
-
     items = []
     for person in people:
         try:

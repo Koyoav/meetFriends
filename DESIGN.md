@@ -13,6 +13,12 @@ gatherings, and get reminded when it's time to reconnect.
 - **Push notifications:** Firebase Cloud Messaging
 - **Hosting:** Railway or Render (managed MySQL + Python app deploy) — finalized at deploy time
 - **Repo:** `Koyoav/meetfriends` (private)
+- **Backend architecture:** layered — `routers/` (HTTP) → `dal/` (all
+  database queries, one module per entity) → `models/`. `services/` holds
+  pure business logic (scoring, date math) with no DB access of its own. See
+  [`backend/README.md`](./backend/README.md) for the full breakdown and the
+  test layout (100% branch coverage enforced in CI, tests live next to the
+  code they test).
 
 ## 3. Multi-tenancy
 

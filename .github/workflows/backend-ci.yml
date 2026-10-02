@@ -47,6 +47,10 @@ jobs:
       - name: Apply migrations against MySQL
         env:
           DATABASE_URL: mysql+pymysql://meetfriends:meetfriends@127.0.0.1:3306/meetfriends
+          # alembic's console-script entry point doesn't add the cwd to
+          # sys.path (unlike pytest), so "from app import models" in
+          # alembic/env.py would otherwise fail with ModuleNotFoundError.
+          PYTHONPATH: .
         run: alembic upgrade head
 
       - name: Run tests

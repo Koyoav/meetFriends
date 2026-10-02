@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 
 // Shared look for the login/signup forms, which differ only in field count and copy.
+// title is unified at 28 (Signup previously used 26) so both screens share one heading size.
 export const authStyles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#fff' },
   title: { fontSize: 28, fontWeight: '700', textAlign: 'center' },

@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import * as authApi from '../api/auth';
-import { ApiError } from '../api/client';
 import { clearTokens, getAccessToken, setTokens } from './tokenStorage';
 
 type AuthContextValue = {
@@ -54,5 +53,3 @@ export function useAuth(): AuthContextValue {
   if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
-
-export { ApiError };

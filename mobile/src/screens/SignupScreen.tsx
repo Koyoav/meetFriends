@@ -1,18 +1,11 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
 import type { AuthStackParamList } from '../navigation/types';
+import { authStyles as styles } from './authStyles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
 
@@ -93,32 +86,9 @@ export default function SignupScreen({ navigation }: Props) {
 }
 
 function describeSignupError(error: ApiError): string {
-  if (error.status === 409) return 'An account with that email already exists.';
-  return typeof error.detail === 'string' ? error.detail : 'Signup failed. Try again.';
+  // The backend returns 400 with a plain-text detail for a duplicate email (see
+  // backend/app/routers/auth.py's signup()); there's no distinct error code to
+  // branch on, so surface its detail directly rather than guessing a status code.
+  if (typeof error.detail === 'string') return error.detail;
+  return 'Signup failed. Try again.';
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#fff' },
-  title: { fontSize: 26, fontWeight: '700', textAlign: 'center' },
-  subtitle: { fontSize: 15, color: '#666', textAlign: 'center', marginTop: 4, marginBottom: 32 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 12,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#2f6fed',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  error: { color: '#d33', marginBottom: 12, textAlign: 'center' },
-  link: { color: '#2f6fed', textAlign: 'center', marginTop: 20, fontSize: 15 },
-});

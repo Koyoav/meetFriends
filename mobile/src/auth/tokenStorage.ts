@@ -3,6 +3,10 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // expo-secure-store has no web implementation; fall back to AsyncStorage there.
+// Note: unlike the OS keychain/keystore used on iOS/Android, AsyncStorage on web is
+// backed by localStorage, which any script running on the page (e.g. via XSS) can
+// read in plaintext. The primary targets are iOS/Android; the web fallback trades
+// that off for having something that runs there at all.
 const isWeb = Platform.OS === 'web';
 
 const ACCESS_TOKEN_KEY = 'meetfriends.access_token';

@@ -84,17 +84,19 @@ async function doRefreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null;
 
   const response = await rawRequest('/auth/refresh', { method: 'POST', body: { refresh_token: refreshToken } }, null);
-
-  // The user logged out (or another session-expiry) while this call was in flight.
-  // Storage was already cleared by that path; don't let this stale result undo it.
-  if (generationAtStart !== authGeneration) return null;
-
   const data = await parseBody(response);
 
-  // Treat a malformed 2xx body the same as a rejected refresh, rather than letting
+  // The user logged out (or another session-expiry) while this call was in flight —
+  // checked as late as possible, right before the side effects below, since logout()
+  // can run during any of the awaits above. Storage was already cleared by that path;
+  // don't let this stale result write to or clear it again.
+  if (generationAtStart !== authGeneration) return null;
+
+  // Treat a malformed 2xx body (missing either token) the same as a rejected refresh,
+  // rather than letting a partial write leave an unusable refresh_token in storage, or
   // `data.access_token` throw a TypeError that would bypass the ApiError path callers
   // already handle (e.g. LoginScreen/SignupScreen's `instanceof ApiError` check).
-  if (!response.ok || data?.access_token === undefined) {
+  if (!response.ok || !data?.access_token || !data?.refresh_token) {
     await clearTokens();
     onSessionExpired?.();
     return null;

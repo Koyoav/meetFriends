@@ -13,6 +13,16 @@ export function setSessionExpiredHandler(handler: (() => void) | null): void {
   onSessionExpired = handler;
 }
 
+// Bumped on an explicit logout so a refresh that was already in flight at that moment
+// can tell its result is stale and must not write tokens back into storage — otherwise
+// a successful /auth/refresh resolving just after logout() clears storage would silently
+// undo the logout (the server has no idea the user logged out locally).
+let authGeneration = 0;
+
+export function invalidateAuthGeneration(): void {
+  authGeneration += 1;
+}
+
 export class ApiError extends Error {
   status: number;
   detail: unknown;
@@ -69,10 +79,16 @@ function refreshAccessToken(): Promise<string | null> {
 }
 
 async function doRefreshAccessToken(): Promise<string | null> {
+  const generationAtStart = authGeneration;
   const refreshToken = await getRefreshToken();
   if (!refreshToken) return null;
 
   const response = await rawRequest('/auth/refresh', { method: 'POST', body: { refresh_token: refreshToken } }, null);
+
+  // The user logged out (or another session-expiry) while this call was in flight.
+  // Storage was already cleared by that path; don't let this stale result undo it.
+  if (generationAtStart !== authGeneration) return null;
+
   if (!response.ok) {
     await clearTokens();
     onSessionExpired?.();
@@ -84,7 +100,14 @@ async function doRefreshAccessToken(): Promise<string | null> {
   return data.access_token;
 }
 
-/** Calls the backend. Retries once with a refreshed access token on a 401 when `auth` is set. */
+/**
+ * Calls the backend. Retries once with a refreshed access token on a 401 when `auth`
+ * is set. Note: if the refresh itself fails, the caller still gets this rejection
+ * (ApiError with the original 401) on top of the app having redirected to the signed-out
+ * stack via the session-expired handler — there's currently only one authenticated call
+ * site in this codebase (none yet; auth.login/signup don't pass `auth: true`), so no
+ * screen has needed to special-case that double signal yet.
+ */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const accessToken = options.auth ? await getAccessToken() : null;
   let response = await rawRequest(path, options, accessToken);

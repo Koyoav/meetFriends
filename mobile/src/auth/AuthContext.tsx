@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import * as authApi from '../api/auth';
-import { setSessionExpiredHandler } from '../api/client';
+import { invalidateAuthGeneration, setSessionExpiredHandler } from '../api/client';
 import { clearTokens, getAccessToken, setTokens } from './tokenStorage';
 
 type AuthContextValue = {
@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsSignedIn(true);
       },
       async logout() {
+        invalidateAuthGeneration();
         await clearTokens();
         setIsSignedIn(false);
       },

@@ -19,5 +19,7 @@ class Person(Base):
     name: Mapped[str] = mapped_column(String(255))
     role: Mapped[PersonRole] = mapped_column(Enum(PersonRole))
     birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    birth_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    birth_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     friend: Mapped["Friend"] = relationship(back_populates="people")

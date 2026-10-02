@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models import Friend, Person, User
-from app.schemas.person import PersonCreate, PersonRead
+from app.schemas.person import PersonCreate, PersonRead, PersonUpdate
 
 router = APIRouter(prefix="/friends/{friend_id}/people", tags=["people"])
 
@@ -18,6 +18,17 @@ def _get_friend_or_404(db: Session, friend_id: int, household_id: int) -> Friend
     if friend is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Friend not found")
     return friend
+
+
+def _get_person_or_404(db: Session, friend_id: int, person_id: int) -> Person:
+    person = (
+        db.query(Person)
+        .filter(Person.id == person_id, Person.friend_id == friend_id)
+        .first()
+    )
+    if person is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
+    return person
 
 
 @router.post("", response_model=PersonRead, status_code=status.HTTP_201_CREATED)
@@ -35,6 +46,24 @@ def add_person(
     return person
 
 
+@router.patch("/{person_id}", response_model=PersonRead)
+def update_person(
+    friend_id: int,
+    person_id: int,
+    payload: PersonUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Person:
+    _get_friend_or_404(db, friend_id, current_user.household_id)
+    person = _get_person_or_404(db, friend_id, person_id)
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(person, field, value)
+    db.commit()
+    db.refresh(person)
+    return person
+
+
 @router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_person(
     friend_id: int,
@@ -43,12 +72,6 @@ def delete_person(
     db: Session = Depends(get_db),
 ) -> None:
     _get_friend_or_404(db, friend_id, current_user.household_id)
-    person = (
-        db.query(Person)
-        .filter(Person.id == person_id, Person.friend_id == friend_id)
-        .first()
-    )
-    if person is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
+    person = _get_person_or_404(db, friend_id, person_id)
     db.delete(person)
     db.commit()

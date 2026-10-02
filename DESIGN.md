@@ -65,7 +65,9 @@ ours, some have kids that get along with ours."
 | friend_id | FK → Friend | |
 | name | string | |
 | role | enum: adult / kid | |
-| birth_year | int, nullable | optional, useful context for kids-fit |
+| birth_year | int, nullable | optional, useful context for kids-fit and age |
+| birth_month | int 1–12, nullable | must be set together with birth_day |
+| birth_day | int 1–31, nullable | must be set together with birth_month |
 
 ### FriendGatheringType (the "relationship tracks" you want to maintain per friend)
 | field | type | notes |
@@ -148,25 +150,44 @@ they have just one), date (defaults to today), location, optional notes.
 This is the same `Gathering` create endpoint described in the data model —
 called out here because it's a primary interaction, not an afterthought.
 
-## 8. Auth model
+## 8. Birthdays
+
+A separate feature from gathering reminders — triggered by a calendar date
+recurring annually, not by time-since-last-contact.
+
+- Any `Person` (adult or kid) can have a `birth_month`/`birth_day` (and
+  optionally `birth_year`) set via `POST .../people` or
+  `PATCH .../people/{person_id}`.
+- `GET /birthdays?month=<1-12>` (defaults to the current month) returns
+  everyone in the household's friends with a birthday in that month, each
+  with the computed `turning_age` (when `birth_year` is known) and
+  `days_until` (can be negative if already passed this month — it's a
+  calendar-month browse, not a forward-looking countdown).
+- **Same-day push notification** (Phase 2, alongside gathering-reminder
+  push): the same daily scheduled job that checks gathering thresholds will
+  also check `birth_month`/`birth_day` against today's date and push via
+  FCM when it matches.
+
+## 9. Auth model
 
 Custom JWT (access + refresh). All users in a household have equal
 permissions on that household's data for now — no owner/admin distinction
 yet (can be added later if needed for multi-user households or billing
 roles).
 
-## 9. Phased roadmap
+## 10. Phased roadmap
 
 **Phase 1 — MVP**
 - Backend: household/user signup + login, Friend CRUD (+ People),
-  FriendGatheringType CRUD, Gathering (history) CRUD, rankings
+  FriendGatheringType CRUD, Gathering (history) CRUD, rankings, Birthdays
 - Mobile: login, friend list (sortable/filterable by rankings), add/edit
-  friend incl. people + gathering types, log a gathering, Reminders screen
-  (in-app, no push yet)
+  friend incl. people + gathering types, log a gathering, Reminders screen,
+  Birthdays screen (in-app, no push yet)
 
 **Phase 2 — Push notifications**
-- FCM integration, scheduled job for threshold-crossing detection, device
-  token registration from the mobile app
+- FCM integration, scheduled daily job covering both gathering-reminder
+  threshold crossings and same-day birthdays, device token registration
+  from the mobile app
 
 **Phase 3 — Future (not building yet)**
 - Multi-household self-signup / onboarding flow

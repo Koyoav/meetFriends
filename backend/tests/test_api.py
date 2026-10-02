@@ -1,3 +1,6 @@
+from datetime import date
+
+
 def _signup(client, email="yoav@example.com", household_name="Our Household"):
     r = client.post(
         "/auth/signup",
@@ -134,3 +137,102 @@ def test_friends_are_isolated_per_household(client):
     )
     r = client.get(f"/friends/{friend['id']}", headers=other_headers)
     assert r.status_code == 404
+
+
+def _create_friend(client, headers, display_name="The Cohens"):
+    return client.post(
+        "/friends",
+        json={"display_name": display_name, "adult_fit_score": 9, "importance_score": 10},
+        headers=headers,
+    ).json()
+
+
+def test_can_add_and_update_birthday_on_a_person(client):
+    headers = _auth_headers(_signup(client))
+    friend = _create_friend(client, headers)
+
+    person = client.post(
+        f"/friends/{friend['id']}/people",
+        json={"name": "Noa", "role": "kid"},
+        headers=headers,
+    ).json()
+    assert person["birth_month"] is None
+
+    r = client.patch(
+        f"/friends/{friend['id']}/people/{person['id']}",
+        json={"birth_year": 2019, "birth_month": 5, "birth_day": 14},
+        headers=headers,
+    )
+    assert r.status_code == 200, r.text
+    updated = r.json()
+    assert (updated["birth_month"], updated["birth_day"], updated["birth_year"]) == (5, 14, 2019)
+
+
+def test_birth_month_and_day_must_be_provided_together(client):
+    headers = _auth_headers(_signup(client))
+    friend = _create_friend(client, headers)
+
+    r = client.post(
+        f"/friends/{friend['id']}/people",
+        json={"name": "Noa", "role": "kid", "birth_month": 5},
+        headers=headers,
+    )
+    assert r.status_code == 422
+
+
+def test_birthdays_endpoint_filters_by_month_and_computes_age(client):
+    headers = _auth_headers(_signup(client))
+    friend = _create_friend(client, headers)
+
+    today = date.today()
+    this_month_day = 1 if today.day != 1 else 2
+    other_month = 1 if today.month != 1 else 2
+
+    client.post(
+        f"/friends/{friend['id']}/people",
+        json={
+            "name": "Noa",
+            "role": "kid",
+            "birth_year": today.year - 7,
+            "birth_month": today.month,
+            "birth_day": this_month_day,
+        },
+        headers=headers,
+    )
+    client.post(
+        f"/friends/{friend['id']}/people",
+        json={"name": "Dan", "role": "adult", "birth_month": other_month, "birth_day": 10},
+        headers=headers,
+    )
+
+    r = client.get("/birthdays", headers=headers)
+    assert r.status_code == 200, r.text
+    results = r.json()
+    assert len(results) == 1
+    assert results[0]["person_name"] == "Noa"
+    assert results[0]["turning_age"] == 7
+
+    r = client.get("/birthdays", params={"month": other_month}, headers=headers)
+    assert r.status_code == 200, r.text
+    results = r.json()
+    assert len(results) == 1
+    assert results[0]["person_name"] == "Dan"
+    assert results[0]["turning_age"] is None
+
+
+def test_birthdays_are_isolated_per_household(client):
+    first_headers = _auth_headers(_signup(client, email="yoav@example.com"))
+    friend = _create_friend(client, first_headers)
+    today = date.today()
+    client.post(
+        f"/friends/{friend['id']}/people",
+        json={"name": "Noa", "role": "kid", "birth_month": today.month, "birth_day": 1},
+        headers=first_headers,
+    )
+
+    other_headers = _auth_headers(
+        _signup(client, email="stranger@example.com", household_name="Other Household")
+    )
+    r = client.get("/birthdays", headers=other_headers)
+    assert r.status_code == 200
+    assert r.json() == []

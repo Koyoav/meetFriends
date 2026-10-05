@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
-import HomeScreen from '../screens/HomeScreen';
+import FriendListScreen from '../screens/FriendListScreen';
 import type { AppStackParamList, AuthStackParamList } from './types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -23,7 +23,7 @@ function AuthNavigator() {
 function AppNavigator() {
   return (
     <AppStack.Navigator>
-      <AppStack.Screen name="Home" component={HomeScreen} options={{ title: 'MeetFriends' }} />
+      <AppStack.Screen name="FriendList" component={FriendListScreen} options={{ title: 'Friends' }} />
     </AppStack.Navigator>
   );
 }

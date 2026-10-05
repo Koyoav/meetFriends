@@ -117,9 +117,9 @@ async function doRefreshAccessToken(): Promise<string | null> {
  * Calls the backend. Retries once with a refreshed access token on a 401 when `auth`
  * is set. Note: if the refresh itself fails, the caller still gets this rejection
  * (ApiError with the original 401) on top of the app having redirected to the signed-out
- * stack via the session-expired handler — there's currently only one authenticated call
- * site in this codebase (none yet; auth.login/signup don't pass `auth: true`), so no
- * screen has needed to special-case that double signal yet.
+ * stack via the session-expired handler. Callers that may still be mounted when that
+ * happens (e.g. FriendListScreen) need their own guard against setting state after the
+ * handler has already navigated them away — see its `isMounted` ref.
  */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const accessToken = options.auth ? await getAccessToken() : null;

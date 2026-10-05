@@ -200,3 +200,20 @@ roles).
 **Phase 3 — Future (not building yet)**
 - Multi-household self-signup / onboarding flow
 - Billing/subscription support
+
+## 11. UI/UX design pass
+
+A dedicated pass to review and tighten up the look and feel of the mobile
+app, once the core Phase 1 screens exist. Not a blocker for building
+screens — happens alongside/after them.
+
+**Process:**
+- Claude mocks up screens as interactive HTML prototypes (Claude artifacts)
+  first, so Yoav can react to layout/flow quickly without touching design
+  software or code.
+- For anything needing pixel-level mockups (spacing, colors, icon sets),
+  use Figma (free tier) — Claude can read Figma frames directly (via
+  Figma's Dev Mode MCP) and translate them into React Native code.
+- Mobile UI is built on a single React Native component library
+  (React Native Paper) for consistent theming across screens instead of
+  one-off custom styling per screen.

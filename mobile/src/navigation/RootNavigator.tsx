@@ -27,7 +27,7 @@ function AppNavigator() {
     <AppStack.Navigator>
       <AppStack.Screen name="FriendList" component={FriendListScreen} options={{ title: 'KeepClose' }} />
       <AppStack.Screen name="FriendForm" component={FriendFormScreen} />
-      <AppStack.Screen name="LogGathering" component={LogGatheringScreen} />
+      <AppStack.Screen name="LogGathering" component={LogGatheringScreen} options={{ title: 'Log a gathering' }} />
     </AppStack.Navigator>
   );
 }

@@ -54,10 +54,6 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
   }, []);
 
   useEffect(() => {
-    navigation.setOptions({ title: 'Log a gathering' });
-  }, [navigation]);
-
-  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {

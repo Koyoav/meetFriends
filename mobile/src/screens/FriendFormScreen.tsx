@@ -25,6 +25,7 @@ import {
   updateFriendScalars,
   updatePerson,
   type Friend,
+  type FriendScalarInput,
   type GatheringTypeLabel,
   type PersonInput,
   type PersonRole,
@@ -56,6 +57,19 @@ type LocalPerson = {
   birthYear: string;
   birthMonth: string;
   birthDay: string;
+};
+
+// A LocalPerson's text fields, parsed and range-checked once in buildPayload. Both
+// the create and edit save paths work from this rather than re-parsing the raw
+// strings, so there's exactly one place that can get the parsing wrong.
+type ValidatedPerson = {
+  key: string;
+  id?: number;
+  name: string;
+  role: PersonRole;
+  birth_year: number | null;
+  birth_month: number | null;
+  birth_day: number | null;
 };
 
 function personToLocal(person: Friend['people'][number]): LocalPerson {
@@ -156,7 +170,9 @@ export default function FriendFormScreen({ navigation, route }: Props) {
     });
   }
 
-  function buildPayload(): { ok: true; value: ReturnType<typeof validPayload> } | { ok: false; error: string } {
+  function buildPayload():
+    | { ok: true; scalars: FriendScalarInput; peopleValidated: ValidatedPerson[] }
+    | { ok: false; error: string } {
     const trimmedName = displayName.trim();
     if (!trimmedName) return { ok: false, error: 'Give this friend a name.' };
 
@@ -172,40 +188,51 @@ export default function FriendFormScreen({ navigation, route }: Props) {
       if (kidsScoreValue === null) return { ok: false, error: 'Kids fit score must be a number from 1 to 10, or left blank.' };
     }
 
-    const peoplePayload: PersonInput[] = [];
+    const peopleValidated: ValidatedPerson[] = [];
     for (const person of people) {
       const name = person.name.trim();
       if (!name) return { ok: false, error: 'Every person needs a name (or remove the blank row).' };
-      if ((person.birthMonth.trim() === '') !== (person.birthDay.trim() === '')) {
-        return { ok: false, error: `${name}'s birth month and day must be filled in together.` };
-      }
-      const birthMonth = parseOptionalInt(person.birthMonth);
+
+      const birthYear = parseOptionalDigits(person.birthYear);
+      if (birthYear === 'invalid') return { ok: false, error: `${name}'s birth year must be a number.` };
+
+      const birthMonth = parseOptionalDigits(person.birthMonth);
+      if (birthMonth === 'invalid') return { ok: false, error: `${name}'s birth month must be a number.` };
       if (birthMonth !== null && (birthMonth < 1 || birthMonth > 12)) {
         return { ok: false, error: `${name}'s birth month must be from 1 to 12.` };
       }
-      const birthDay = parseOptionalInt(person.birthDay);
+
+      const birthDay = parseOptionalDigits(person.birthDay);
+      if (birthDay === 'invalid') return { ok: false, error: `${name}'s birth day must be a number.` };
       if (birthDay !== null && (birthDay < 1 || birthDay > 31)) {
         return { ok: false, error: `${name}'s birth day must be from 1 to 31.` };
       }
-      peoplePayload.push({
+
+      if ((birthMonth === null) !== (birthDay === null)) {
+        return { ok: false, error: `${name}'s birth month and day must be filled in together.` };
+      }
+
+      peopleValidated.push({
+        key: person.key,
+        id: person.id,
         name,
         role: person.role,
-        birth_year: parseOptionalInt(person.birthYear),
-        birth_month: parseOptionalInt(person.birthMonth),
-        birth_day: parseOptionalInt(person.birthDay),
+        birth_year: birthYear,
+        birth_month: birthMonth,
+        birth_day: birthDay,
       });
     }
 
     return {
       ok: true,
-      value: validPayload({
+      scalars: {
         display_name: trimmedName,
         notes: notes.trim() === '' ? null : notes.trim(),
         adult_fit_score: adultScore,
         kids_fit_score: kidsScoreValue,
         importance_score: importanceScoreValue,
-        people: peoplePayload,
-      }),
+      },
+      peopleValidated,
     };
   }
 
@@ -219,12 +246,15 @@ export default function FriendFormScreen({ navigation, route }: Props) {
     setIsSubmitting(true);
     try {
       if (isEditing) {
-        const { people: _people, ...scalars } = result.value;
-        await updateFriendScalars(friendId, scalars);
+        await updateFriendScalars(friendId, result.scalars);
         await syncGatheringTypes(friendId, originalGatheringTypeIds.current, gatheringTypes);
-        await syncPeople(friendId, originalPersonIds.current, people, setPeople);
+        await syncPeople(friendId, originalPersonIds.current, result.peopleValidated, setPeople);
       } else {
-        await createFriend({ ...result.value, gatheringTypes: Array.from(gatheringTypes) });
+        await createFriend({
+          ...result.scalars,
+          people: result.peopleValidated.map(toPersonInput),
+          gatheringTypes: Array.from(gatheringTypes),
+        });
       }
       navigation.goBack();
     } catch (e) {
@@ -421,23 +451,22 @@ function parseScoreInRange(text: string): number | null {
   return n;
 }
 
-function parseOptionalInt(text: string): number | null {
+// null means the field was left blank; 'invalid' means it had non-digit content,
+// which the caller must reject rather than silently treating as blank.
+function parseOptionalDigits(text: string): number | null | 'invalid' {
   const trimmed = text.trim();
   if (trimmed === '') return null;
-  const n = Number(trimmed);
-  return Number.isInteger(n) ? n : null;
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : 'invalid';
 }
 
-// Narrows the ad-hoc object literal in buildPayload to a named, reusable shape.
-function validPayload(value: {
-  display_name: string;
-  notes: string | null;
-  adult_fit_score: number;
-  kids_fit_score: number | null;
-  importance_score: number;
-  people: PersonInput[];
-}) {
-  return value;
+function toPersonInput(person: ValidatedPerson): PersonInput {
+  return {
+    name: person.name,
+    role: person.role,
+    birth_year: person.birth_year,
+    birth_month: person.birth_month,
+    birth_day: person.birth_day,
+  };
 }
 
 // originalByLabel is mutated as each call succeeds, so that if a later call in this
@@ -468,18 +497,12 @@ async function syncGatheringTypes(
 async function syncPeople(
   friendId: number,
   originalIds: Set<number>,
-  people: LocalPerson[],
+  people: ValidatedPerson[],
   setPeople: (updater: (current: LocalPerson[]) => LocalPerson[]) => void,
 ): Promise<void> {
   const keptIds = new Set<number>();
   for (const person of people) {
-    const payload: PersonInput = {
-      name: person.name.trim(),
-      role: person.role,
-      birth_year: parseOptionalInt(person.birthYear),
-      birth_month: parseOptionalInt(person.birthMonth),
-      birth_day: parseOptionalInt(person.birthDay),
-    };
+    const payload = toPersonInput(person);
     if (person.id !== undefined) {
       keptIds.add(person.id);
       await updatePerson(friendId, person.id, payload);

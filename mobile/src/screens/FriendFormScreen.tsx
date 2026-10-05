@@ -179,6 +179,14 @@ export default function FriendFormScreen({ navigation, route }: Props) {
       if ((person.birthMonth.trim() === '') !== (person.birthDay.trim() === '')) {
         return { ok: false, error: `${name}'s birth month and day must be filled in together.` };
       }
+      const birthMonth = parseOptionalInt(person.birthMonth);
+      if (birthMonth !== null && (birthMonth < 1 || birthMonth > 12)) {
+        return { ok: false, error: `${name}'s birth month must be from 1 to 12.` };
+      }
+      const birthDay = parseOptionalInt(person.birthDay);
+      if (birthDay !== null && (birthDay < 1 || birthDay > 31)) {
+        return { ok: false, error: `${name}'s birth day must be from 1 to 31.` };
+      }
       peoplePayload.push({
         name,
         role: person.role,
@@ -211,9 +219,10 @@ export default function FriendFormScreen({ navigation, route }: Props) {
     setIsSubmitting(true);
     try {
       if (isEditing) {
-        await updateFriendScalars(friendId, result.value);
+        const { people: _people, ...scalars } = result.value;
+        await updateFriendScalars(friendId, scalars);
         await syncGatheringTypes(friendId, originalGatheringTypeIds.current, gatheringTypes);
-        await syncPeople(friendId, originalPersonIds.current, people);
+        await syncPeople(friendId, originalPersonIds.current, people, setPeople);
       } else {
         await createFriend({ ...result.value, gatheringTypes: Array.from(gatheringTypes) });
       }
@@ -431,6 +440,10 @@ function validPayload(value: {
   return value;
 }
 
+// originalByLabel is mutated as each call succeeds, so that if a later call in this
+// same sync fails, the caller's next retry sees the already-applied changes as the
+// new baseline and doesn't redo them (which would add duplicate rows or 404 on an
+// id that's already gone).
 async function syncGatheringTypes(
   friendId: number,
   originalByLabel: Map<GatheringTypeLabel, number>,
@@ -440,14 +453,24 @@ async function syncGatheringTypes(
     const existingId = originalByLabel.get(option.value);
     const isSelected = selected.has(option.value);
     if (isSelected && existingId === undefined) {
-      await addGatheringType(friendId, option.value);
+      const created = await addGatheringType(friendId, option.value);
+      originalByLabel.set(option.value, created.id);
     } else if (!isSelected && existingId !== undefined) {
       await deleteGatheringType(friendId, existingId);
+      originalByLabel.delete(option.value);
     }
   }
 }
 
-async function syncPeople(friendId: number, originalIds: Set<number>, people: LocalPerson[]): Promise<void> {
+// originalIds and the person rows themselves (via setPeople, attaching the new id
+// once a person is created) are updated as each call succeeds, for the same
+// retry-safety reason as syncGatheringTypes above.
+async function syncPeople(
+  friendId: number,
+  originalIds: Set<number>,
+  people: LocalPerson[],
+  setPeople: (updater: (current: LocalPerson[]) => LocalPerson[]) => void,
+): Promise<void> {
   const keptIds = new Set<number>();
   for (const person of people) {
     const payload: PersonInput = {
@@ -461,12 +484,16 @@ async function syncPeople(friendId: number, originalIds: Set<number>, people: Lo
       keptIds.add(person.id);
       await updatePerson(friendId, person.id, payload);
     } else {
-      await addPerson(friendId, payload);
+      const created = await addPerson(friendId, payload);
+      keptIds.add(created.id);
+      originalIds.add(created.id);
+      setPeople((current) => current.map((p) => (p.key === person.key ? { ...p, id: created.id } : p)));
     }
   }
   for (const id of originalIds) {
     if (!keptIds.has(id)) {
       await deletePerson(friendId, id);
+      originalIds.delete(id);
     }
   }
 }

@@ -24,6 +24,7 @@ import {
   getFriend,
   updateFriendScalars,
   updatePerson,
+  EDITABLE_GATHERING_TYPES,
   type Friend,
   type FriendScalarInput,
   type GatheringTypeLabel,
@@ -35,12 +36,7 @@ import type { AppStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'FriendForm'>;
 
-const GATHERING_TYPE_OPTIONS: { value: GatheringTypeLabel; label: string }[] = [
-  { value: 'FAMILY', label: 'Family' },
-  { value: 'MEN_1_1', label: 'Men 1:1' },
-  { value: 'WOMEN_1_1', label: 'Women 1:1' },
-  { value: 'KIDS_ONLY', label: 'Kids only' },
-];
+const GATHERING_TYPE_OPTIONS = EDITABLE_GATHERING_TYPES;
 
 const ROLE_OPTIONS: { value: PersonRole; label: string }[] = [
   { value: 'adult', label: 'Adult' },

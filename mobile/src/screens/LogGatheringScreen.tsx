@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { ApiError } from '../api/client';
-import { getFriend, type GatheringType } from '../api/friends';
+import { getFriend, gatheringTypeLabel, type GatheringType } from '../api/friends';
 import { listGatherings, logGathering, type Gathering, type GatheringInput, type GatheringLocation } from '../api/gatherings';
 import { ChipRow } from '../components/Chips';
 import type { AppStackParamList } from '../navigation/types';
@@ -64,9 +64,8 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
         const [friend, gatherings] = await Promise.all([getFriend(friendId), listGatherings(friendId)]);
         if (cancelled) return;
         setFriendName(friend.display_name);
-        const types = friend.gathering_types.filter((gt) => gt.type !== 'CUSTOM');
-        setGatheringTypes(types);
-        setSelectedTypeId(types.length > 0 ? types[0].id : null);
+        setGatheringTypes(friend.gathering_types);
+        setSelectedTypeId(friend.gathering_types.length > 0 ? friend.gathering_types[0].id : null);
         setPastGatherings(gatherings);
       } catch (e) {
         if (cancelled) return;
@@ -89,6 +88,7 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
     if (m === null) return { ok: false, error: 'Month must be from 1 to 12.' };
     const d = parseDatePart(day, 1, 31);
     if (d === null) return { ok: false, error: 'Day must be from 1 to 31.' };
+    if (!isRealDate(y, m, d)) return { ok: false, error: `That date doesn't exist — check the day for that month.` };
 
     const mm = String(m).padStart(2, '0');
     const dd = String(d).padStart(2, '0');
@@ -210,19 +210,12 @@ function parseDatePart(text: string, min: number, max: number): number | null {
   return n;
 }
 
-function gatheringTypeLabel(gt: GatheringType): string {
-  switch (gt.type) {
-    case 'FAMILY':
-      return 'Family';
-    case 'MEN_1_1':
-      return 'Men 1:1';
-    case 'WOMEN_1_1':
-      return 'Women 1:1';
-    case 'KIDS_ONLY':
-      return 'Kids only';
-    default:
-      return gt.custom_label ?? gt.type;
-  }
+// Catches combinations each part's own range check lets through, e.g. day 30 in
+// February — JS Date normalizes an out-of-range day by rolling into the next
+// month instead of rejecting it, so the round-trip back to y/m/d is what detects it.
+function isRealDate(year: number, month: number, day: number): boolean {
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
 function gatheringTypeLabelById(types: GatheringType[], id: number): string {

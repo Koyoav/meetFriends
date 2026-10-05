@@ -1,5 +1,4 @@
 import { request } from './client';
-import type { GatheringTypeLabel } from './friends';
 
 // Mirrors backend/app/models/gathering.py's GatheringLocation.
 export type GatheringLocation = 'OUR_PLACE' | 'THEIR_PLACE' | 'OUTSIDE';
@@ -33,7 +32,3 @@ export function logGathering(friendId: number, payload: GatheringInput): Promise
     body: payload,
   });
 }
-
-// Re-exported so screens that only deal with gatherings don't also need to import
-// from api/friends just for this shared label type.
-export type { GatheringTypeLabel };

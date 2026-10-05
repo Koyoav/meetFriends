@@ -1,18 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../api/client';
+import { ChipRow } from '../components/Chips';
 import {
   getInvitePlanning,
   type GatheringTypeFilter,
@@ -93,15 +86,25 @@ export default function FriendListScreen({ navigation }: Props) {
     [sortBy, gatheringType],
   );
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // Refetches whenever this screen regains focus (e.g. coming back from adding or
+  // editing a friend), not just on mount, so a save elsewhere shows up without the
+  // user having to pull-to-refresh manually.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   useEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
+      headerLeft: () => (
         <Pressable onPress={logout} hitSlop={8}>
           <Text style={styles.logout}>Log out</Text>
+        </Pressable>
+      ),
+      headerRight: () => (
+        <Pressable onPress={() => navigation.navigate('FriendForm', {})} hitSlop={8}>
+          <Text style={styles.addButton}>+ Add</Text>
         </Pressable>
       ),
     });
@@ -124,7 +127,9 @@ export default function FriendListScreen({ navigation }: Props) {
           <FlatList
             data={items}
             keyExtractor={(item) => String(item.friend_id)}
-            renderItem={({ item }) => <FriendRow item={item} />}
+            renderItem={({ item }) => (
+              <FriendRow item={item} onPress={() => navigation.navigate('FriendForm', { friendId: item.friend_id })} />
+            )}
             contentContainerStyle={items.length === 0 ? styles.emptyContent : styles.listContent}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => load({ background: true })} />}
             ListEmptyComponent={
@@ -139,48 +144,16 @@ export default function FriendListScreen({ navigation }: Props) {
   );
 }
 
-function FriendRow({ item }: { item: InvitePlanningItem }) {
+function FriendRow({ item, onPress }: { item: InvitePlanningItem; onPress: () => void }) {
   return (
-    <View style={styles.row}>
+    <Pressable style={styles.row} onPress={onPress}>
       <Text style={styles.name}>{item.display_name}</Text>
       <Text style={styles.meta}>{describeStaleness(item.days_since_last)}</Text>
       <Text style={styles.scores}>
         Combined {item.combined_score.toFixed(1)} · Adult {item.adult_fit_score}
         {item.kids_fit_score !== null ? ` · Kids ${item.kids_fit_score}` : ''} · Importance {item.importance_score}
       </Text>
-    </View>
-  );
-}
-
-function ChipRow<T extends string>({
-  options,
-  selected,
-  onSelect,
-  label,
-}: {
-  options: { value: T; label: string }[];
-  selected: T;
-  onSelect: (value: T) => void;
-  label: string;
-}) {
-  return (
-    <View style={styles.chipRowContainer}>
-      <Text style={styles.chipRowLabel}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-        {options.map((option) => {
-          const isSelected = option.value === selected;
-          return (
-            <Pressable
-              key={option.value}
-              style={[styles.chip, isSelected && styles.chipSelected]}
-              onPress={() => onSelect(option.value)}
-            >
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{option.label}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-    </View>
+    </Pressable>
   );
 }
 
@@ -200,19 +173,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   logout: { color: '#2f6fed', fontSize: 15, fontWeight: '600' },
-  chipRowContainer: { marginTop: 12 },
-  chipRowLabel: { fontSize: 12, fontWeight: '600', color: '#888', textTransform: 'uppercase', marginLeft: 16, marginBottom: 6 },
-  chipRow: { paddingHorizontal: 16, gap: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  chipSelected: { backgroundColor: '#2f6fed', borderColor: '#2f6fed' },
-  chipText: { fontSize: 14, color: '#333' },
-  chipTextSelected: { color: '#fff', fontWeight: '600' },
+  addButton: { color: '#2f6fed', fontSize: 15, fontWeight: '600' },
   listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
   emptyContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32 },
   emptyText: { textAlign: 'center', color: '#666', fontSize: 15, lineHeight: 22 },

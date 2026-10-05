@@ -35,7 +35,8 @@ export default function LoginScreen({ navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.title}>MeetFriends</Text>
+      <Text style={styles.title}>KeepClose</Text>
+      <Text style={styles.tagline}>Make time for the people who matter</Text>
       <Text style={styles.subtitle}>Log in to your household</Text>
 
       <TextInput

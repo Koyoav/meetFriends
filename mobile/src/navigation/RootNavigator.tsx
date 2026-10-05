@@ -23,7 +23,7 @@ function AuthNavigator() {
 function AppNavigator() {
   return (
     <AppStack.Navigator>
-      <AppStack.Screen name="FriendList" component={FriendListScreen} options={{ title: 'Friends' }} />
+      <AppStack.Screen name="FriendList" component={FriendListScreen} options={{ title: 'KeepClose' }} />
     </AppStack.Navigator>
   );
 }

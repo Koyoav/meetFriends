@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native';
 export const authStyles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 24, backgroundColor: '#fff' },
   title: { fontSize: 28, fontWeight: '700', textAlign: 'center' },
+  tagline: { fontSize: 14, color: '#888', textAlign: 'center', marginTop: 4 },
   subtitle: { fontSize: 15, color: '#666', textAlign: 'center', marginTop: 4, marginBottom: 32 },
   input: {
     borderWidth: 1,

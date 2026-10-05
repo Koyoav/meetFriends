@@ -23,7 +23,7 @@ function AuthNavigator() {
 function AppNavigator() {
   return (
     <AppStack.Navigator>
-      <AppStack.Screen name="Home" component={HomeScreen} options={{ title: 'MeetFriends' }} />
+      <AppStack.Screen name="Home" component={HomeScreen} options={{ title: 'KeepClose' }} />
     </AppStack.Navigator>
   );
 }

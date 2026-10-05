@@ -1,4 +1,6 @@
-# MeetFriends — Technical Design
+# KeepClose — Technical Design
+
+*Make time for the people who matter.*
 
 ## 1. Overview
 

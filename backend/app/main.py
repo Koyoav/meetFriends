@@ -11,7 +11,7 @@ from app.routers import (
     reminders,
 )
 
-app = FastAPI(title="MeetFriends API")
+app = FastAPI(title="KeepClose API")
 
 app.include_router(auth.router)
 app.include_router(friends.router)

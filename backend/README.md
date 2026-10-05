@@ -1,6 +1,6 @@
-# MeetFriends Backend
+# KeepClose Backend
 
-FastAPI + MySQL backend for the MeetFriends app. See
+FastAPI + MySQL backend for the KeepClose app. See
 [`../DESIGN.md`](../DESIGN.md) for the full technical design.
 
 ## Running locally (Docker)

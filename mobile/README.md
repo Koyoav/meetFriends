@@ -1,4 +1,4 @@
-# MeetFriends Mobile
+# KeepClose Mobile
 
 Expo (React Native + TypeScript) app for iOS and Android. See
 [`../DESIGN.md`](../DESIGN.md) for the product plan; this talks to the

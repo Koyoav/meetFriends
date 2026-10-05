@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -107,6 +107,17 @@ export default function FriendFormScreen({ navigation, route }: Props) {
   const originalPersonIds = useRef<Set<number>>(new Set());
   const originalGatheringTypeIds = useRef<Map<GatheringTypeLabel, number>>(new Map());
   const nextLocalKey = useRef(0);
+
+  // A 401 during any save/delete call can trigger client.ts's onSessionExpired
+  // handler, which unmounts this screen before the rejected promise is caught —
+  // guard the catch/finally setState calls below against running after that.
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     navigation.setOptions({ title: isEditing ? 'Edit friend' : 'Add friend' });
@@ -248,7 +259,9 @@ export default function FriendFormScreen({ navigation, route }: Props) {
       if (isEditing) {
         await updateFriendScalars(friendId, result.scalars);
         await syncGatheringTypes(friendId, originalGatheringTypeIds.current, gatheringTypes);
-        await syncPeople(friendId, originalPersonIds.current, result.peopleValidated, setPeople);
+        await syncPeople(friendId, originalPersonIds.current, result.peopleValidated, (updater) => {
+          if (isMounted.current) setPeople(updater);
+        });
       } else {
         await createFriend({
           ...result.scalars,
@@ -256,11 +269,11 @@ export default function FriendFormScreen({ navigation, route }: Props) {
           gatheringTypes: Array.from(gatheringTypes),
         });
       }
-      navigation.goBack();
+      if (isMounted.current) navigation.goBack();
     } catch (e) {
-      setSubmitError(e instanceof ApiError ? describeError(e) : 'Could not save. Try again.');
+      if (isMounted.current) setSubmitError(e instanceof ApiError ? describeError(e) : 'Could not save. Try again.');
     } finally {
-      setIsSubmitting(false);
+      if (isMounted.current) setIsSubmitting(false);
     }
   }
 
@@ -275,8 +288,9 @@ export default function FriendFormScreen({ navigation, route }: Props) {
           setIsDeleting(true);
           try {
             await deleteFriendRequest(friendId);
-            navigation.goBack();
+            if (isMounted.current) navigation.goBack();
           } catch (e) {
+            if (!isMounted.current) return;
             setSubmitError(e instanceof ApiError ? describeError(e) : 'Could not delete. Try again.');
             setIsDeleting(false);
           }

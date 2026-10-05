@@ -4,5 +4,5 @@ export type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
-  Home: undefined;
+  FriendList: undefined;
 };

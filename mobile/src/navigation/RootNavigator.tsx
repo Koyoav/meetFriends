@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import FriendListScreen from '../screens/FriendListScreen';
+import FriendFormScreen from '../screens/FriendFormScreen';
 import type { AppStackParamList, AuthStackParamList } from './types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -24,6 +25,7 @@ function AppNavigator() {
   return (
     <AppStack.Navigator>
       <AppStack.Screen name="FriendList" component={FriendListScreen} options={{ title: 'KeepClose' }} />
+      <AppStack.Screen name="FriendForm" component={FriendFormScreen} />
     </AppStack.Navigator>
   );
 }

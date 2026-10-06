@@ -7,6 +7,7 @@ import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import FriendListScreen from '../screens/FriendListScreen';
 import FriendFormScreen from '../screens/FriendFormScreen';
+import LogGatheringScreen from '../screens/LogGatheringScreen';
 import type { AppStackParamList, AuthStackParamList } from './types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -26,6 +27,7 @@ function AppNavigator() {
     <AppStack.Navigator>
       <AppStack.Screen name="FriendList" component={FriendListScreen} options={{ title: 'KeepClose' }} />
       <AppStack.Screen name="FriendForm" component={FriendFormScreen} />
+      <AppStack.Screen name="LogGathering" component={LogGatheringScreen} options={{ title: 'Log a gathering' }} />
     </AppStack.Navigator>
   );
 }

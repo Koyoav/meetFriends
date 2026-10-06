@@ -6,4 +6,5 @@ export type AuthStackParamList = {
 export type AppStackParamList = {
   FriendList: undefined;
   FriendForm: { friendId?: number };
+  LogGathering: { friendId: number };
 };

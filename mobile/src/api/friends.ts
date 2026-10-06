@@ -23,6 +23,25 @@ export type GatheringType = {
   created_at: string;
 };
 
+const BUILT_IN_GATHERING_TYPE_LABELS: Record<Exclude<GatheringTypeLabel, 'CUSTOM'>, string> = {
+  FAMILY: 'Family',
+  MEN_1_1: 'Men 1:1',
+  WOMEN_1_1: 'Women 1:1',
+  KIDS_ONLY: 'Kids only',
+};
+
+// The gathering types a friend can be given from the add/edit friend screen — CUSTOM
+// isn't editable there (it would need its own custom_label field), so it's excluded
+// from this list but still handled by gatheringTypeLabel below for display elsewhere.
+export const EDITABLE_GATHERING_TYPES: { value: Exclude<GatheringTypeLabel, 'CUSTOM'>; label: string }[] = (
+  Object.entries(BUILT_IN_GATHERING_TYPE_LABELS) as [Exclude<GatheringTypeLabel, 'CUSTOM'>, string][]
+).map(([value, label]) => ({ value, label }));
+
+export function gatheringTypeLabel(gatheringType: Pick<GatheringType, 'type' | 'custom_label'>): string {
+  if (gatheringType.type === 'CUSTOM') return gatheringType.custom_label ?? 'Custom';
+  return BUILT_IN_GATHERING_TYPE_LABELS[gatheringType.type];
+}
+
 export type Friend = {
   id: number;
   household_id: number;

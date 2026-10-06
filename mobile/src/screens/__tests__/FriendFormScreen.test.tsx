@@ -7,7 +7,18 @@ import * as friendsApi from '../../api/friends';
 import { ApiError } from '../../api/client';
 import type { Friend } from '../../api/friends';
 
-jest.mock('../../api/friends');
+jest.mock('../../api/friends', () => ({
+  ...jest.requireActual('../../api/friends'),
+  getFriend: jest.fn(),
+  createFriend: jest.fn(),
+  updateFriendScalars: jest.fn(),
+  deleteFriend: jest.fn(),
+  addPerson: jest.fn(),
+  updatePerson: jest.fn(),
+  deletePerson: jest.fn(),
+  addGatheringType: jest.fn(),
+  deleteGatheringType: jest.fn(),
+}));
 
 const mockedGetFriend = friendsApi.getFriend as jest.MockedFunction<typeof friendsApi.getFriend>;
 const mockedCreateFriend = friendsApi.createFriend as jest.MockedFunction<typeof friendsApi.createFriend>;

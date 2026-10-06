@@ -129,7 +129,11 @@ export default function FriendListScreen({ navigation }: Props) {
             data={items}
             keyExtractor={(item) => String(item.friend_id)}
             renderItem={({ item }) => (
-              <FriendRow item={item} onPress={() => navigation.navigate('FriendForm', { friendId: item.friend_id })} />
+              <FriendRow
+                item={item}
+                onPress={() => navigation.navigate('FriendForm', { friendId: item.friend_id })}
+                onLogGathering={() => navigation.navigate('LogGathering', { friendId: item.friend_id })}
+              />
             )}
             contentContainerStyle={items.length === 0 ? styles.emptyContent : styles.listContent}
             refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => load({ background: true })} />}
@@ -145,10 +149,23 @@ export default function FriendListScreen({ navigation }: Props) {
   );
 }
 
-function FriendRow({ item, onPress }: { item: InvitePlanningItem; onPress: () => void }) {
+function FriendRow({
+  item,
+  onPress,
+  onLogGathering,
+}: {
+  item: InvitePlanningItem;
+  onPress: () => void;
+  onLogGathering: () => void;
+}) {
   return (
     <Pressable style={styles.row} onPress={onPress}>
-      <Text style={styles.name}>{item.display_name}</Text>
+      <View style={styles.rowHeader}>
+        <Text style={styles.name}>{item.display_name}</Text>
+        <Pressable onPress={onLogGathering} hitSlop={8} style={styles.logButton}>
+          <Text style={styles.logButtonText}>Log gathering</Text>
+        </Pressable>
+      </View>
       <Text style={styles.meta}>{describeStaleness(item.days_since_last)}</Text>
       <Text style={styles.scores}>
         Combined {item.combined_score.toFixed(1)} · Adult {item.adult_fit_score}
@@ -192,7 +209,10 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
-  name: { fontSize: 17, fontWeight: '700' },
+  rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  name: { fontSize: 17, fontWeight: '700', flexShrink: 1 },
+  logButton: { backgroundColor: '#eef3fd', borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5 },
+  logButtonText: { color: '#2f6fed', fontSize: 12, fontWeight: '600' },
   meta: { fontSize: 14, color: '#2f6fed', marginTop: 4, fontWeight: '600' },
   scores: { fontSize: 13, color: '#888', marginTop: 6 },
 });

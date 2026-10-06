@@ -189,6 +189,19 @@ describe('FriendListScreen', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('FriendForm', { friendId: 7 });
   });
 
+  test('press_log_gathering_on_a_friend_row__called__navigates_to_LogGathering_with_that_friends_id', async () => {
+    // Arrange
+    mockedGetInvitePlanning.mockResolvedValueOnce([item({ friend_id: 7, display_name: 'Dan' })]);
+    const { navigation } = await renderScreen();
+    await screen.findByText('Dan');
+
+    // Act
+    await fireEvent.press(screen.getByText('Log gathering'));
+
+    // Assert
+    expect(navigation.navigate).toHaveBeenCalledWith('LogGathering', { friendId: 7 });
+  });
+
   test('press_the_header_log_out_button__called__calls_logout', async () => {
     // Arrange
     mockedGetInvitePlanning.mockResolvedValueOnce([]);

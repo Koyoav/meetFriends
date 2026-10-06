@@ -6,9 +6,11 @@ import {
   deleteFriend,
   deleteGatheringType,
   deletePerson,
+  gatheringTypeLabel,
   getFriend,
   updateFriendScalars,
   updatePerson,
+  EDITABLE_GATHERING_TYPES,
 } from '../friends';
 
 jest.mock('../client', () => ({ request: jest.fn() }));
@@ -150,5 +152,42 @@ describe('friends api', () => {
 
     // Assert
     expect(mockedRequest).toHaveBeenCalledWith('/friends/1/gathering-types/3', { method: 'DELETE', auth: true });
+  });
+
+  test.each([
+    ['FAMILY', 'Family'],
+    ['MEN_1_1', 'Men 1:1'],
+    ['WOMEN_1_1', 'Women 1:1'],
+    ['KIDS_ONLY', 'Kids only'],
+  ] as const)('gatheringTypeLabel__built_in_type_%s__returns_%s', (type, label) => {
+    // Act
+    const result = gatheringTypeLabel({ type, custom_label: null });
+
+    // Assert
+    expect(result).toBe(label);
+  });
+
+  test('gatheringTypeLabel__custom_type_with_label__returns_custom_label', () => {
+    // Act
+    const result = gatheringTypeLabel({ type: 'CUSTOM', custom_label: 'Book club' });
+
+    // Assert
+    expect(result).toBe('Book club');
+  });
+
+  test('gatheringTypeLabel__custom_type_without_label__returns_fallback', () => {
+    // Act
+    const result = gatheringTypeLabel({ type: 'CUSTOM', custom_label: null });
+
+    // Assert
+    expect(result).toBe('Custom');
+  });
+
+  test('EDITABLE_GATHERING_TYPES__defined__excludes_custom', () => {
+    // Act
+    const values = EDITABLE_GATHERING_TYPES.map((option) => option.value);
+
+    // Assert
+    expect(values).toEqual(['FAMILY', 'MEN_1_1', 'WOMEN_1_1', 'KIDS_ONLY']);
   });
 });

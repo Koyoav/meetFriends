@@ -176,7 +176,12 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
 
       {submitError ? <Text style={styles.error}>{submitError}</Text> : null}
 
-      <Pressable style={[styles.button, isSubmitting && styles.buttonDisabled]} onPress={handleSubmit} disabled={isSubmitting}>
+      <Pressable
+        testID="log-gathering-submit"
+        style={[styles.button, isSubmitting && styles.buttonDisabled]}
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+      >
         {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
       </Pressable>
 

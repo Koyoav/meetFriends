@@ -15,14 +15,39 @@
     "react-native-screens": "^4.28.0"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "^29.5.14",
     "@types/react": "~19.2.2",
+    "jest": "^30.5.2",
+    "jest-expo": "^57.0.5",
+    "react-test-renderer": "^19.2.3",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
-  "private": true
+  "private": true,
+  "jest": {
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": ["<rootDir>/jest.setup.ts"],
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "!src/**/*.d.ts",
+      "!src/navigation/types.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 96,
+        "branches": 88,
+        "functions": 98,
+        "lines": 99
+      }
+    }
+  }
 }

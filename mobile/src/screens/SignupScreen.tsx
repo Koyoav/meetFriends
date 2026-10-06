@@ -71,6 +71,7 @@ export default function SignupScreen({ navigation }: Props) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable
+        testID="signup-submit"
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
         onPress={handleSubmit}
         disabled={!canSubmit}

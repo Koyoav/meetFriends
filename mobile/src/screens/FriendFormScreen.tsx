@@ -330,9 +330,20 @@ export default function FriendFormScreen({ navigation, route }: Props) {
 
         <Text style={styles.sectionTitle}>Scores (1–10)</Text>
         <View style={styles.scoreRow}>
-          <ScoreField label="Adult fit" value={adultFitScore} onChangeText={setAdultFitScore} />
-          <ScoreField label="Kids fit" value={kidsFitScore} onChangeText={setKidsFitScore} placeholder="N/A" />
-          <ScoreField label="Importance" value={importanceScore} onChangeText={setImportanceScore} />
+          <ScoreField testID="adult-fit-score" label="Adult fit" value={adultFitScore} onChangeText={setAdultFitScore} />
+          <ScoreField
+            testID="kids-fit-score"
+            label="Kids fit"
+            value={kidsFitScore}
+            onChangeText={setKidsFitScore}
+            placeholder="N/A"
+          />
+          <ScoreField
+            testID="importance-score"
+            label="Importance"
+            value={importanceScore}
+            onChangeText={setImportanceScore}
+          />
         </View>
 
         <MultiChipRow
@@ -359,12 +370,22 @@ export default function FriendFormScreen({ navigation, route }: Props) {
 
         {submitError ? <Text style={styles.error}>{submitError}</Text> : null}
 
-        <Pressable style={[styles.button, isBusy && styles.buttonDisabled]} onPress={handleSave} disabled={isBusy}>
+        <Pressable
+          testID="save-friend"
+          style={[styles.button, isBusy && styles.buttonDisabled]}
+          onPress={handleSave}
+          disabled={isBusy}
+        >
           {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
         </Pressable>
 
         {isEditing ? (
-          <Pressable style={[styles.deleteButton, isBusy && styles.buttonDisabled]} onPress={handleDelete} disabled={isBusy}>
+          <Pressable
+            testID="delete-friend"
+            style={[styles.deleteButton, isBusy && styles.buttonDisabled]}
+            onPress={handleDelete}
+            disabled={isBusy}
+          >
             {isDeleting ? <ActivityIndicator color="#d33" /> : <Text style={styles.deleteButtonText}>Delete friend</Text>}
           </Pressable>
         ) : null}
@@ -374,11 +395,13 @@ export default function FriendFormScreen({ navigation, route }: Props) {
 }
 
 function ScoreField({
+  testID,
   label,
   value,
   onChangeText,
   placeholder,
 }: {
+  testID: string;
   label: string;
   value: string;
   onChangeText: (text: string) => void;
@@ -388,6 +411,7 @@ function ScoreField({
     <View style={styles.scoreField}>
       <Text style={styles.scoreLabel}>{label}</Text>
       <TextInput
+        testID={testID}
         style={styles.scoreInput}
         value={value}
         onChangeText={onChangeText}

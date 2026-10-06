@@ -58,6 +58,7 @@ export default function LoginScreen({ navigation }: Props) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable
+        testID="login-submit"
         style={[styles.button, !canSubmit && styles.buttonDisabled]}
         onPress={handleSubmit}
         disabled={!canSubmit}

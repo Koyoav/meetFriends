@@ -34,6 +34,7 @@
   "private": true,
   "jest": {
     "preset": "jest-expo",
+    "setupFilesAfterEnv": ["<rootDir>/jest.setup.ts"],
     "collectCoverage": true,
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",

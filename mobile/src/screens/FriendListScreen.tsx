@@ -125,6 +125,7 @@ export default function FriendListScreen({ navigation }: Props) {
               visible when the list already has friends in it from a previous successful load. */}
           {error && items.length > 0 ? <Text style={styles.errorBanner}>{error}</Text> : null}
           <FlatList
+            testID="friend-list"
             data={items}
             keyExtractor={(item) => String(item.friend_id)}
             renderItem={({ item }) => (

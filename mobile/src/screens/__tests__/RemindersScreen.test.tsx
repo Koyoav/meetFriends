@@ -21,7 +21,7 @@ function item(overrides: Partial<ReminderItem> = {}): ReminderItem {
     friend_id: 1,
     friend_display_name: 'Dan',
     gathering_type_id: 10,
-    gathering_type_label: 'Family',
+    gathering_type_label: 'FAMILY',
     last_gathering_date: '2026-01-01',
     days_since_last: 40,
     reminder_threshold_days: 30,
@@ -44,8 +44,9 @@ describe('RemindersScreen', () => {
   test('render__overdue_reminders_returned__shows_each_friend_type_and_overdue_days', async () => {
     // Arrange
     mockedGetReminders.mockResolvedValueOnce([
-      item({ friend_id: 1, friend_display_name: 'Dan', gathering_type_label: 'Family', days_overdue: 10 }),
-      item({ friend_id: 2, friend_display_name: 'Ann', gathering_type_label: 'Kids only', days_overdue: 1 }),
+      item({ friend_id: 1, friend_display_name: 'Dan', gathering_type_label: 'FAMILY', days_overdue: 10 }),
+      item({ friend_id: 2, friend_display_name: 'Ann', gathering_type_label: 'KIDS_ONLY', days_overdue: 1 }),
+      item({ friend_id: 3, friend_display_name: 'Bob', gathering_type_label: 'Book club', days_overdue: 3 }),
     ]);
 
     // Act
@@ -57,6 +58,9 @@ describe('RemindersScreen', () => {
     expect(screen.getByText('10 days overdue')).toBeTruthy();
     expect(screen.getByText('Ann')).toBeTruthy();
     expect(screen.getByText('1 day overdue')).toBeTruthy();
+    expect(screen.getByText('Kids only')).toBeTruthy();
+    expect(screen.getByText('Book club')).toBeTruthy();
+    expect(screen.queryByText('KIDS_ONLY')).toBeNull();
   });
 
   test('render__reminder_with_no_past_gathering__shows_never_met_up', async () => {

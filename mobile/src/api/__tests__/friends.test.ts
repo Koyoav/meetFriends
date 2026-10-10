@@ -7,6 +7,7 @@ import {
   deleteGatheringType,
   deletePerson,
   gatheringTypeLabel,
+  prettifyGatheringTypeLabel,
   getFriend,
   updateFriendScalars,
   updatePerson,
@@ -189,5 +190,18 @@ describe('friends api', () => {
 
     // Assert
     expect(values).toEqual(['FAMILY', 'MEN_1_1', 'WOMEN_1_1', 'KIDS_ONLY']);
+  });
+
+  test.each([
+    ['FAMILY', 'Family'],
+    ['MEN_1_1', 'Men 1:1'],
+    ['Book club', 'Book club'],
+    ['constructor', 'constructor'],
+  ])('prettifyGatheringTypeLabel__%s__returns_%s', (raw, expected) => {
+    // Act
+    const result = prettifyGatheringTypeLabel(raw);
+
+    // Assert
+    expect(result).toBe(expected);
   });
 });

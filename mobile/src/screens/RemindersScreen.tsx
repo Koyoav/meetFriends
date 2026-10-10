@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { ApiError } from '../api/client';
+import { prettifyGatheringTypeLabel } from '../api/friends';
 import { getReminders, type ReminderItem } from '../api/reminders';
 import type { AppStackParamList } from '../navigation/types';
 
@@ -111,7 +112,7 @@ function ReminderRow({
           <Text style={styles.logButtonText}>Log gathering</Text>
         </Pressable>
       </View>
-      <Text style={styles.type}>{item.gathering_type_label}</Text>
+      <Text style={styles.type}>{prettifyGatheringTypeLabel(item.gathering_type_label)}</Text>
       <Text style={styles.meta}>{describeOverdue(item)}</Text>
     </Pressable>
   );

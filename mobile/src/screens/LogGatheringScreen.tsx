@@ -61,15 +61,8 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
         if (cancelled) return;
         setFriendName(friend.display_name);
         setGatheringTypes(friend.gathering_types);
-        const preselectedIsValid =
-          preselectedTypeId !== undefined && friend.gathering_types.some((gt) => gt.id === preselectedTypeId);
-        setSelectedTypeId(
-          preselectedIsValid
-            ? preselectedTypeId!
-            : friend.gathering_types.length > 0
-              ? friend.gathering_types[0].id
-              : null,
-        );
+        const preselected = friend.gathering_types.find((gt) => gt.id === preselectedTypeId);
+        setSelectedTypeId((preselected ?? friend.gathering_types[0])?.id ?? null);
         setPastGatherings(gatherings);
       } catch (e) {
         if (cancelled) return;

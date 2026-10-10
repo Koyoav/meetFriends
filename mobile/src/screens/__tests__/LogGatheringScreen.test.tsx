@@ -65,9 +65,9 @@ function gathering(overrides: Partial<Gathering> = {}): Gathering {
   };
 }
 
-async function renderScreen(friendId = 1) {
+async function renderScreen(friendId = 1, gatheringTypeId?: number) {
   const navigation = { navigate: jest.fn(), goBack: jest.fn(), setOptions: jest.fn() } as any;
-  const route = { params: { friendId } } as any;
+  const route = { params: { friendId, gatheringTypeId } } as any;
   await render(<LogGatheringScreen navigation={navigation} route={route} />);
   return { navigation };
 }
@@ -179,6 +179,42 @@ describe('LogGatheringScreen', () => {
       expect.objectContaining({ gathering_type_id: 1, location: 'OUR_PLACE', notes: null }),
     );
     expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('route_has_a_valid_preselected_gathering_type_id__submit_uses_that_type_not_the_first_one', async () => {
+    // Arrange
+    mockedGetFriend.mockResolvedValueOnce(
+      friend({ gathering_types: [gatheringType({ id: 1 }), gatheringType({ id: 2, type: 'KIDS_ONLY' })] }),
+    );
+    mockedListGatherings.mockResolvedValueOnce([]);
+    mockedLogGathering.mockResolvedValueOnce(gathering());
+    await renderScreen(1, 2);
+    await screen.findByText('Dan');
+
+    // Act
+    await fireEvent.press(screen.getByTestId('log-gathering-submit'));
+
+    // Assert
+    await waitFor(() => expect(mockedLogGathering).toHaveBeenCalledTimes(1));
+    expect(mockedLogGathering).toHaveBeenCalledWith(1, expect.objectContaining({ gathering_type_id: 2 }));
+  });
+
+  test('route_has_a_preselected_gathering_type_id_the_friend_no_longer_has__falls_back_to_the_first_type', async () => {
+    // Arrange
+    mockedGetFriend.mockResolvedValueOnce(
+      friend({ gathering_types: [gatheringType({ id: 1 }), gatheringType({ id: 2, type: 'KIDS_ONLY' })] }),
+    );
+    mockedListGatherings.mockResolvedValueOnce([]);
+    mockedLogGathering.mockResolvedValueOnce(gathering());
+    await renderScreen(1, 999);
+    await screen.findByText('Dan');
+
+    // Act
+    await fireEvent.press(screen.getByTestId('log-gathering-submit'));
+
+    // Assert
+    await waitFor(() => expect(mockedLogGathering).toHaveBeenCalledTimes(1));
+    expect(mockedLogGathering).toHaveBeenCalledWith(1, expect.objectContaining({ gathering_type_id: 1 }));
   });
 
   test('submit__invalid_calendar_date__shows_validation_error_and_does_not_call_logGathering', async () => {

@@ -42,6 +42,14 @@ export function gatheringTypeLabel(gatheringType: Pick<GatheringType, 'type' | '
   return BUILT_IN_GATHERING_TYPE_LABELS[gatheringType.type];
 }
 
+// For API responses that flatten a gathering type to one string (the backend sends the
+// custom label, or the raw enum value for built-in types, e.g. GET /reminders).
+export function prettifyGatheringTypeLabel(raw: string): string {
+  return Object.prototype.hasOwnProperty.call(BUILT_IN_GATHERING_TYPE_LABELS, raw)
+    ? BUILT_IN_GATHERING_TYPE_LABELS[raw as keyof typeof BUILT_IN_GATHERING_TYPE_LABELS]
+    : raw;
+}
+
 export type Friend = {
   id: number;
   household_id: number;

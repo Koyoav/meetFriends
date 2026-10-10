@@ -26,7 +26,7 @@ function todayParts(): { year: string; month: string; day: string } {
 }
 
 export default function LogGatheringScreen({ navigation, route }: Props) {
-  const { friendId } = route.params;
+  const { friendId, gatheringTypeId: preselectedTypeId } = route.params;
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,7 +61,8 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
         if (cancelled) return;
         setFriendName(friend.display_name);
         setGatheringTypes(friend.gathering_types);
-        setSelectedTypeId(friend.gathering_types.length > 0 ? friend.gathering_types[0].id : null);
+        const preselected = friend.gathering_types.find((gt) => gt.id === preselectedTypeId);
+        setSelectedTypeId((preselected ?? friend.gathering_types[0])?.id ?? null);
         setPastGatherings(gatherings);
       } catch (e) {
         if (cancelled) return;
@@ -73,7 +74,7 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [friendId]);
+  }, [friendId, preselectedTypeId]);
 
   function buildPayload(): { ok: true; value: GatheringInput } | { ok: false; error: string } {
     if (selectedTypeId === null) return { ok: false, error: 'Pick a gathering type.' };

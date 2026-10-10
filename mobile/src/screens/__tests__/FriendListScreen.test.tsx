@@ -231,6 +231,20 @@ describe('FriendListScreen', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('FriendForm', {});
   });
 
+  test('press_the_header_reminders_button__called__navigates_to_Reminders', async () => {
+    // Arrange
+    mockedGetInvitePlanning.mockResolvedValueOnce([]);
+    const { navigation } = await renderScreen();
+    const { headerRight } = navigation.setOptions.mock.calls[0][0];
+    await render(headerRight());
+
+    // Act
+    await fireEvent.press(screen.getByText('Reminders'));
+
+    // Assert
+    expect(navigation.navigate).toHaveBeenCalledWith('Reminders');
+  });
+
   test('select_a_different_sort_option__called__reloads_with_the_new_sort', async () => {
     // Arrange
     mockedGetInvitePlanning.mockResolvedValueOnce([]);

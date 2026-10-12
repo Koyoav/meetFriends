@@ -104,6 +104,9 @@ export default function FriendListScreen({ navigation }: Props) {
       ),
       headerRight: () => (
         <View style={styles.headerRightRow}>
+          <Pressable onPress={() => navigation.navigate('Birthdays')} hitSlop={8}>
+            <Text style={styles.birthdaysButton}>Birthdays</Text>
+          </Pressable>
           <Pressable onPress={() => navigation.navigate('Reminders')} hitSlop={8}>
             <Text style={styles.remindersButton}>Reminders</Text>
           </Pressable>
@@ -198,6 +201,7 @@ const styles = StyleSheet.create({
   logout: { color: '#2f6fed', fontSize: 15, fontWeight: '600' },
   headerRightRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   remindersButton: { color: '#2f6fed', fontSize: 15, fontWeight: '600' },
+  birthdaysButton: { color: '#2f6fed', fontSize: 15, fontWeight: '600' },
   addButton: { color: '#2f6fed', fontSize: 15, fontWeight: '600' },
   listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
   emptyContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 32 },

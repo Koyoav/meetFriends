@@ -8,4 +8,5 @@ export type AppStackParamList = {
   FriendForm: { friendId?: number };
   LogGathering: { friendId: number; gatheringTypeId?: number };
   Reminders: undefined;
+  Birthdays: undefined;
 };

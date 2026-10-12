@@ -245,6 +245,20 @@ describe('FriendListScreen', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('Reminders');
   });
 
+  test('press_the_header_birthdays_button__called__navigates_to_Birthdays', async () => {
+    // Arrange
+    mockedGetInvitePlanning.mockResolvedValueOnce([]);
+    const { navigation } = await renderScreen();
+    const { headerRight } = navigation.setOptions.mock.calls[0][0];
+    await render(headerRight());
+
+    // Act
+    await fireEvent.press(screen.getByText('Birthdays'));
+
+    // Assert
+    expect(navigation.navigate).toHaveBeenCalledWith('Birthdays');
+  });
+
   test('select_a_different_sort_option__called__reloads_with_the_new_sort', async () => {
     // Arrange
     mockedGetInvitePlanning.mockResolvedValueOnce([]);

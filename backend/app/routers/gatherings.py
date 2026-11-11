@@ -6,7 +6,7 @@ from app.dal import friends as friends_dal
 from app.dal import gatherings as gatherings_dal
 from app.database import get_db
 from app.models import Gathering, User
-from app.schemas.gathering import GatheringCreate, GatheringRead
+from app.schemas.gathering import GatheringCreate, GatheringRead, GatheringUpdate
 
 router = APIRouter(prefix="/friends/{friend_id}/gatherings", tags=["gatherings"])
 
@@ -30,3 +30,16 @@ def log_gathering(
 ) -> Gathering:
     friends_dal.get_friend_or_404(db, friend_id, current_user.household_id)
     return gatherings_dal.log_gathering(db, friend_id, current_user.id, payload)
+
+
+@router.patch("/{gathering_id}", response_model=GatheringRead)
+def update_gathering(
+    friend_id: int,
+    gathering_id: int,
+    payload: GatheringUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Gathering:
+    friends_dal.get_friend_or_404(db, friend_id, current_user.household_id)
+    gathering = gatherings_dal.get_gathering_or_404(db, friend_id, gathering_id)
+    return gatherings_dal.update_gathering(db, friend_id, gathering, payload)

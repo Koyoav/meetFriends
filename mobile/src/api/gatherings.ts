@@ -32,3 +32,15 @@ export function logGathering(friendId: number, payload: GatheringInput): Promise
     body: payload,
   });
 }
+
+export function updateGathering(
+  friendId: number,
+  gatheringId: number,
+  payload: GatheringInput,
+): Promise<Gathering> {
+  return request<Gathering>(`/friends/${friendId}/gatherings/${gatheringId}`, {
+    method: 'PATCH',
+    auth: true,
+    body: payload,
+  });
+}

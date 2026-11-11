@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.dal.gathering_types import find_gathering_type
 from app.models import FriendGatheringType, Gathering, GatheringTypeLabel
-from app.schemas.gathering import GatheringCreate
+from app.schemas.gathering import GatheringCreate, GatheringUpdate
 from app.schemas.invite_planning import GatheringTypeFilter
 
 
@@ -18,6 +18,17 @@ def list_gatherings(db: Session, friend_id: int) -> list[Gathering]:
         .order_by(Gathering.date.desc())
         .all()
     )
+
+
+def get_gathering_or_404(db: Session, friend_id: int, gathering_id: int) -> Gathering:
+    gathering = (
+        db.query(Gathering)
+        .filter(Gathering.id == gathering_id, Gathering.friend_id == friend_id)
+        .first()
+    )
+    if gathering is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gathering not found")
+    return gathering
 
 
 def log_gathering(
@@ -32,6 +43,27 @@ def log_gathering(
 
     gathering = Gathering(friend_id=friend_id, created_by=created_by, **payload.model_dump())
     db.add(gathering)
+    db.commit()
+    db.refresh(gathering)
+    return gathering
+
+
+def update_gathering(
+    db: Session, friend_id: int, gathering: Gathering, payload: GatheringUpdate
+) -> Gathering:
+    changes = payload.model_dump(exclude_unset=True)
+
+    new_gathering_type_id = changes.get("gathering_type_id")
+    if new_gathering_type_id is not None:
+        gathering_type = find_gathering_type(db, friend_id, new_gathering_type_id)
+        if gathering_type is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Gathering type does not belong to this friend",
+            )
+
+    for field, value in changes.items():
+        setattr(gathering, field, value)
     db.commit()
     db.refresh(gathering)
     return gathering

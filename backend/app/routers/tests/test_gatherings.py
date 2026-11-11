@@ -91,3 +91,113 @@ class TestGatheringsRouter:
 
         # Assert
         assert response.status_code == 404
+
+    def test_update_gathering__valid_change__returns_200_with_updated_fields(
+        self, client, auth_headers
+    ):
+        # Arrange
+        headers = auth_headers()
+        friend, gathering_type = self._create_friend_with_gathering_type(client, headers)
+        gathering = client.post(
+            f"/friends/{friend['id']}/gatherings",
+            json={
+                "gathering_type_id": gathering_type["id"],
+                "date": "2026-10-02",
+                "location": "OUR_PLACE",
+            },
+            headers=headers,
+        ).json()
+
+        # Act
+        response = client.patch(
+            f"/friends/{friend['id']}/gatherings/{gathering['id']}",
+            json={"location": "OUTSIDE"},
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 200
+        assert response.json()["location"] == "OUTSIDE"
+        assert response.json()["date"] == "2026-10-02"
+
+    def test_update_gathering__explicit_null_for_required_field__returns_422(
+        self, client, auth_headers
+    ):
+        # Arrange
+        headers = auth_headers()
+        friend, gathering_type = self._create_friend_with_gathering_type(client, headers)
+        gathering = client.post(
+            f"/friends/{friend['id']}/gatherings",
+            json={
+                "gathering_type_id": gathering_type["id"],
+                "date": "2026-10-02",
+                "location": "OUR_PLACE",
+            },
+            headers=headers,
+        ).json()
+
+        # Act
+        response = client.patch(
+            f"/friends/{friend['id']}/gatherings/{gathering['id']}",
+            json={"location": None},
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 422
+
+    def test_update_gathering__gathering_does_not_exist__returns_404(self, client, auth_headers):
+        # Arrange
+        headers = auth_headers()
+        friend, _ = self._create_friend_with_gathering_type(client, headers)
+
+        # Act
+        response = client.patch(
+            f"/friends/{friend['id']}/gatherings/999",
+            json={"location": "OUTSIDE"},
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 404
+
+    def test_update_gathering__friend_does_not_exist__returns_404(self, client, auth_headers):
+        # Arrange
+        headers = auth_headers()
+
+        # Act
+        response = client.patch(
+            "/friends/999/gatherings/1",
+            json={"location": "OUTSIDE"},
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 404
+
+    def test_update_gathering__new_gathering_type_belongs_to_another_friend__returns_400(
+        self, client, auth_headers
+    ):
+        # Arrange
+        headers = auth_headers()
+        friend_a, gathering_type_a = self._create_friend_with_gathering_type(client, headers)
+        _, gathering_type_b = self._create_friend_with_gathering_type(client, headers)
+        gathering = client.post(
+            f"/friends/{friend_a['id']}/gatherings",
+            json={
+                "gathering_type_id": gathering_type_a["id"],
+                "date": "2026-10-02",
+                "location": "OUR_PLACE",
+            },
+            headers=headers,
+        ).json()
+
+        # Act
+        response = client.patch(
+            f"/friends/{friend_a['id']}/gatherings/{gathering['id']}",
+            json={"gathering_type_id": gathering_type_b["id"]},
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 400

@@ -158,6 +158,13 @@ they have just one), date (defaults to today), location, optional notes.
 This is the same `Gathering` create endpoint described in the data model —
 called out here because it's a primary interaction, not an afterthought.
 
+Logged gatherings are also editable after the fact — mistakes happen (e.g.
+logging "our place" when it was actually outside). The past-gatherings list on
+this same screen is tappable: tapping a row loads its values back into the
+same form (now in an "edit" state) and submitting calls `PATCH
+/friends/{friend_id}/gatherings/{gathering_id}` instead of `POST`, updating
+that row in place rather than creating a new one.
+
 ## 8. Birthdays
 
 A separate feature from gathering reminders — triggered by a calendar date

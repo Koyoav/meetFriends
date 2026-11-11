@@ -1,7 +1,7 @@
 from datetime import date as date_type
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.models.gathering import GatheringLocation
 
@@ -22,6 +22,14 @@ class GatheringUpdate(BaseModel):
     date: date_type | None = None
     location: GatheringLocation | None = None
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def reject_explicit_null_for_required_fields(self) -> "GatheringUpdate":
+        provided = self.model_fields_set
+        for field in ("gathering_type_id", "date", "location"):
+            if field in provided and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+        return self
 
 
 class GatheringRead(GatheringBase):

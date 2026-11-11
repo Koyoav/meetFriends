@@ -120,6 +120,32 @@ class TestGatheringsRouter:
         assert response.json()["location"] == "OUTSIDE"
         assert response.json()["date"] == "2026-10-02"
 
+    def test_update_gathering__explicit_null_for_required_field__returns_422(
+        self, client, auth_headers
+    ):
+        # Arrange
+        headers = auth_headers()
+        friend, gathering_type = self._create_friend_with_gathering_type(client, headers)
+        gathering = client.post(
+            f"/friends/{friend['id']}/gatherings",
+            json={
+                "gathering_type_id": gathering_type["id"],
+                "date": "2026-10-02",
+                "location": "OUR_PLACE",
+            },
+            headers=headers,
+        ).json()
+
+        # Act
+        response = client.patch(
+            f"/friends/{friend['id']}/gatherings/{gathering['id']}",
+            json={"location": None},
+            headers=headers,
+        )
+
+        # Assert
+        assert response.status_code == 422
+
     def test_update_gathering__gathering_does_not_exist__returns_404(self, client, auth_headers):
         # Arrange
         headers = auth_headers()

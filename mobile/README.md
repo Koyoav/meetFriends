@@ -26,6 +26,31 @@ npm start
   signed out, an app stack shown when signed in.
 - `src/screens/` — one screen per file.
 
+## Building a standalone app (no Expo Go)
+
+For anyone to install KeepClose like a normal app, two things need to exist:
+
+1. **A real backend URL.** `EXPO_PUBLIC_API_URL` gets baked into the build at
+   build time, so it must point at a backend reachable from the installer's
+   phone over the internet — not `localhost` or a LAN IP on one machine.
+   Deploying `../backend` (it already reads `DATABASE_URL`/`JWT_SECRET_KEY`
+   from the environment, see its Dockerfile) to a host like Railway or
+   Fly.io gives a stable `https://...` URL for this.
+2. **A standalone build**, via [EAS Build](https://docs.expo.dev/build/introduction/)
+   (free tier, run from an Expo account):
+   ```
+   npx eas-cli build -p android --profile preview --non-interactive
+   ```
+   This produces a downloadable `.apk` — anyone with an Android phone can
+   install it directly (enable "install from unknown sources" when
+   prompted) without Expo Go. `eas.json` defines the `preview` (APK) and
+   `production` (Play Store `.aab`) profiles. Set
+   `EXPO_PUBLIC_API_URL` as an EAS build-time env var (or in `eas.json`'s
+   `build.preview.env`) so it points at the hosted backend from (1).
+
+   An iOS build needs a paid Apple Developer account ($99/yr) and ad-hoc
+   device registration, so it's out of scope until that's needed.
+
 ## Status
 
 Phase 1 (per `DESIGN.md`): login/signup are wired up end-to-end against

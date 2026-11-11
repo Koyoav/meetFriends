@@ -4,7 +4,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { ApiError } from '../api/client';
 import { getFriend, gatheringTypeLabel, type GatheringType } from '../api/friends';
-import { listGatherings, logGathering, type Gathering, type GatheringInput, type GatheringLocation } from '../api/gatherings';
+import {
+  listGatherings,
+  logGathering,
+  updateGathering,
+  type Gathering,
+  type GatheringInput,
+  type GatheringLocation,
+} from '../api/gatherings';
 import { ChipRow } from '../components/Chips';
 import type { AppStackParamList } from '../navigation/types';
 
@@ -37,6 +44,7 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
   const [gatheringTypes, setGatheringTypes] = useState<GatheringType[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null);
   const [pastGatherings, setPastGatherings] = useState<Gathering[]>([]);
+  const [editingGatheringId, setEditingGatheringId] = useState<number | null>(null);
 
   const today = todayParts();
   const [year, setYear] = useState(today.year);
@@ -44,6 +52,29 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
   const [day, setDay] = useState(today.day);
   const [location, setLocation] = useState<GatheringLocation>('OUR_PLACE');
   const [notes, setNotes] = useState('');
+
+  function resetForm() {
+    const now = todayParts();
+    setEditingGatheringId(null);
+    setYear(now.year);
+    setMonth(now.month);
+    setDay(now.day);
+    setLocation('OUR_PLACE');
+    setNotes('');
+    setSubmitError(null);
+  }
+
+  function startEditing(g: Gathering) {
+    const [y, m, d] = g.date.split('-');
+    setEditingGatheringId(g.id);
+    setSelectedTypeId(g.gathering_type_id);
+    setYear(y);
+    setMonth(String(Number(m)));
+    setDay(String(Number(d)));
+    setLocation(g.location);
+    setNotes(g.notes ?? '');
+    setSubmitError(null);
+  }
 
   const isMounted = useRef(true);
   useEffect(() => {
@@ -109,7 +140,11 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      await logGathering(friendId, result.value);
+      if (editingGatheringId !== null) {
+        await updateGathering(friendId, editingGatheringId, result.value);
+      } else {
+        await logGathering(friendId, result.value);
+      }
       if (isMounted.current) navigation.goBack();
     } catch (e) {
       if (!isMounted.current) return;
@@ -150,6 +185,7 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.heading}>{friendName}</Text>
+      <Text style={styles.sectionTitle}>{editingGatheringId !== null ? 'Edit gathering' : 'Log a gathering'}</Text>
 
       <ChipRow
         options={typeOptions}
@@ -183,20 +219,30 @@ export default function LogGatheringScreen({ navigation, route }: Props) {
         onPress={handleSubmit}
         disabled={isSubmitting}
       >
-        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
+        {isSubmitting ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.buttonText}>{editingGatheringId !== null ? 'Save changes' : 'Save'}</Text>
+        )}
       </Pressable>
+
+      {editingGatheringId !== null ? (
+        <Pressable testID="log-gathering-cancel-edit" style={styles.cancelButton} onPress={resetForm} disabled={isSubmitting}>
+          <Text style={styles.cancelButtonText}>Cancel edit</Text>
+        </Pressable>
+      ) : null}
 
       {pastGatherings.length > 0 ? (
         <>
           <Text style={styles.sectionTitle}>Past gatherings</Text>
           {pastGatherings.map((g) => (
-            <View key={g.id} style={styles.pastRow}>
+            <Pressable key={g.id} testID={`edit-gathering-${g.id}`} style={styles.pastRow} onPress={() => startEditing(g)}>
               <Text style={styles.pastDate}>{g.date}</Text>
               <Text style={styles.pastMeta}>
                 {gatheringTypeLabelById(gatheringTypes, g.gathering_type_id)} · {locationLabel(g.location)}
               </Text>
               {g.notes ? <Text style={styles.pastNotes}>{g.notes}</Text> : null}
-            </View>
+            </Pressable>
           ))}
         </>
       ) : null}
@@ -261,6 +307,8 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  cancelButton: { alignItems: 'center', marginTop: 12 },
+  cancelButtonText: { color: '#888', fontSize: 14, fontWeight: '600' },
   pastRow: {
     borderWidth: 1,
     borderColor: '#eee',

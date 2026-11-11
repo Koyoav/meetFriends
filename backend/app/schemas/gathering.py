@@ -1,4 +1,5 @@
-from datetime import date, datetime
+from datetime import date as date_type
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -7,13 +8,20 @@ from app.models.gathering import GatheringLocation
 
 class GatheringBase(BaseModel):
     gathering_type_id: int
-    date: date
+    date: date_type
     location: GatheringLocation
     notes: str | None = None
 
 
 class GatheringCreate(GatheringBase):
     pass
+
+
+class GatheringUpdate(BaseModel):
+    gathering_type_id: int | None = None
+    date: date_type | None = None
+    location: GatheringLocation | None = None
+    notes: str | None = None
 
 
 class GatheringRead(GatheringBase):

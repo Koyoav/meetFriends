@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from app.dal import gatherings as gatherings_dal
 from app.models import GatheringLocation, GatheringTypeLabel
-from app.schemas.gathering import GatheringCreate
+from app.schemas.gathering import GatheringCreate, GatheringUpdate
 from app.schemas.invite_planning import GatheringTypeFilter
 from tests.factories import (
     make_friend,
@@ -89,6 +89,138 @@ class TestGatheringsDal:
         # Act / Assert
         with pytest.raises(HTTPException) as exc_info:
             gatherings_dal.log_gathering(db_session, friend.id, user.id, payload)
+        assert exc_info.value.status_code == 400
+
+    def test_get_gathering_or_404__gathering_belongs_to_friend__returns_it(self, db_session):
+        # Arrange
+        household = make_household(db_session)
+        user = make_user(db_session, household)
+        friend = make_friend(db_session, household)
+        gathering_type = make_gathering_type(db_session, friend)
+        gathering = make_gathering(
+            db_session, friend, gathering_type, user, gathering_date=date(2026, 6, 1)
+        )
+
+        # Act
+        result = gatherings_dal.get_gathering_or_404(db_session, friend.id, gathering.id)
+
+        # Assert
+        assert result.id == gathering.id
+
+    def test_get_gathering_or_404__gathering_does_not_exist__raises_404(self, db_session):
+        # Arrange
+        household = make_household(db_session)
+        friend = make_friend(db_session, household)
+
+        # Act / Assert
+        with pytest.raises(HTTPException) as exc_info:
+            gatherings_dal.get_gathering_or_404(db_session, friend.id, 999)
+        assert exc_info.value.status_code == 404
+
+    def test_get_gathering_or_404__gathering_belongs_to_another_friend__raises_404(
+        self, db_session
+    ):
+        # Arrange
+        household = make_household(db_session)
+        user = make_user(db_session, household)
+        friend = make_friend(db_session, household, display_name="The Cohens")
+        other_friend = make_friend(db_session, household, display_name="The Levis")
+        gathering_type = make_gathering_type(db_session, other_friend)
+        gathering = make_gathering(
+            db_session, other_friend, gathering_type, user, gathering_date=date(2026, 6, 1)
+        )
+
+        # Act / Assert
+        with pytest.raises(HTTPException) as exc_info:
+            gatherings_dal.get_gathering_or_404(db_session, friend.id, gathering.id)
+        assert exc_info.value.status_code == 404
+
+    def test_update_gathering__location_changed__persists_new_location(self, db_session):
+        # Arrange
+        household = make_household(db_session)
+        user = make_user(db_session, household)
+        friend = make_friend(db_session, household)
+        gathering_type = make_gathering_type(db_session, friend)
+        gathering = make_gathering(
+            db_session,
+            friend,
+            gathering_type,
+            user,
+            gathering_date=date(2026, 6, 1),
+            location=GatheringLocation.OUR_PLACE,
+        )
+        payload = GatheringUpdate(location=GatheringLocation.OUTSIDE)
+
+        # Act
+        updated = gatherings_dal.update_gathering(db_session, friend.id, gathering, payload)
+
+        # Assert
+        assert updated.location == GatheringLocation.OUTSIDE
+
+    def test_update_gathering__fields_omitted__leaves_them_unchanged(self, db_session):
+        # Arrange
+        household = make_household(db_session)
+        user = make_user(db_session, household)
+        friend = make_friend(db_session, household)
+        gathering_type = make_gathering_type(db_session, friend)
+        gathering = make_gathering(
+            db_session,
+            friend,
+            gathering_type,
+            user,
+            gathering_date=date(2026, 6, 1),
+            location=GatheringLocation.OUR_PLACE,
+            notes="original notes",
+        )
+        payload = GatheringUpdate(location=GatheringLocation.OUTSIDE)
+
+        # Act
+        updated = gatherings_dal.update_gathering(db_session, friend.id, gathering, payload)
+
+        # Assert
+        assert updated.notes == "original notes"
+        assert updated.gathering_type_id == gathering_type.id
+
+    def test_update_gathering__new_gathering_type_belongs_to_same_friend__persists_change(
+        self, db_session
+    ):
+        # Arrange
+        household = make_household(db_session)
+        user = make_user(db_session, household)
+        friend = make_friend(db_session, household)
+        gathering_type = make_gathering_type(db_session, friend, type=GatheringTypeLabel.FAMILY)
+        other_gathering_type = make_gathering_type(
+            db_session, friend, type=GatheringTypeLabel.MEN_1_1
+        )
+        gathering = make_gathering(
+            db_session, friend, gathering_type, user, gathering_date=date(2026, 6, 1)
+        )
+        payload = GatheringUpdate(gathering_type_id=other_gathering_type.id)
+
+        # Act
+        updated = gatherings_dal.update_gathering(db_session, friend.id, gathering, payload)
+
+        # Assert
+        assert updated.gathering_type_id == other_gathering_type.id
+
+    def test_update_gathering__new_gathering_type_belongs_to_another_friend__raises_400(
+        self, db_session
+    ):
+        # Arrange
+        household = make_household(db_session)
+        user = make_user(db_session, household)
+        friend = make_friend(db_session, household, display_name="The Cohens")
+        other_friend = make_friend(db_session, household, display_name="The Levis")
+        gathering_type = make_gathering_type(db_session, friend)
+        other_gathering_type = make_gathering_type(db_session, other_friend)
+        gathering = make_gathering(
+            db_session, friend, gathering_type, user, gathering_date=date(2026, 6, 1)
+        )
+        payload = GatheringUpdate(gathering_type_id=other_gathering_type.id)
+
+        # Act / Assert
+        with pytest.raises(HTTPException) as exc_info:
+            gatherings_dal.update_gathering(db_session, friend.id, gathering, payload)
         assert exc_info.value.status_code == 400
 
     def test_get_last_gathering_dates_by_type__no_ids_given__returns_empty_dict(

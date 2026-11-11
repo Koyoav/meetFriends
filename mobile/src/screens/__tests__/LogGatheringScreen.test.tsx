@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 
 import LogGatheringScreen from '../LogGatheringScreen';
 import { getFriend } from '../../api/friends';
-import { listGatherings, logGathering } from '../../api/gatherings';
+import { listGatherings, logGathering, updateGathering } from '../../api/gatherings';
 import { ApiError } from '../../api/client';
 import type { Friend, GatheringType } from '../../api/friends';
 import type { Gathering } from '../../api/gatherings';
@@ -16,11 +16,13 @@ jest.mock('../../api/gatherings', () => ({
   ...jest.requireActual('../../api/gatherings'),
   listGatherings: jest.fn(),
   logGathering: jest.fn(),
+  updateGathering: jest.fn(),
 }));
 
 const mockedGetFriend = getFriend as jest.MockedFunction<typeof getFriend>;
 const mockedListGatherings = listGatherings as jest.MockedFunction<typeof listGatherings>;
 const mockedLogGathering = logGathering as jest.MockedFunction<typeof logGathering>;
+const mockedUpdateGathering = updateGathering as jest.MockedFunction<typeof updateGathering>;
 
 function gatheringType(overrides: Partial<GatheringType> = {}): GatheringType {
   return {
@@ -77,6 +79,7 @@ describe('LogGatheringScreen', () => {
     mockedGetFriend.mockReset();
     mockedListGatherings.mockReset();
     mockedLogGathering.mockReset();
+    mockedUpdateGathering.mockReset();
   });
 
   test('load__fails_with_401__shows_session_expired', async () => {
@@ -380,5 +383,90 @@ describe('LogGatheringScreen', () => {
     await waitFor(() =>
       expect(mockedLogGathering).toHaveBeenCalledWith(1, expect.objectContaining({ notes: 'Fun!' })),
     );
+  });
+
+  test('tap_a_past_gathering__fills_the_form_with_its_values_and_shows_edit_mode', async () => {
+    // Arrange
+    mockedGetFriend.mockResolvedValueOnce(
+      friend({ gathering_types: [gatheringType({ id: 1, type: 'FAMILY' }), gatheringType({ id: 2, type: 'KIDS_ONLY' })] }),
+    );
+    mockedListGatherings.mockResolvedValueOnce([
+      gathering({ id: 5, gathering_type_id: 2, date: '2026-08-07', location: 'OUR_PLACE', notes: 'At our place' }),
+    ]);
+    await renderScreen();
+    await screen.findByText('Dan');
+
+    // Act
+    await fireEvent.press(screen.getByTestId('edit-gathering-5'));
+
+    // Assert
+    expect(await screen.findByText('Edit gathering')).toBeTruthy();
+    expect(screen.getByText('Save changes')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Year').props.value).toBe('2026');
+    expect(screen.getByPlaceholderText('Month').props.value).toBe('8');
+    expect(screen.getByPlaceholderText('Day').props.value).toBe('7');
+    expect(screen.getByPlaceholderText('Anything worth remembering about this one').props.value).toBe('At our place');
+  });
+
+  test('edit_a_past_gathering__changed_location__calls_updateGathering_with_that_gathering_id', async () => {
+    // Arrange
+    mockedGetFriend.mockResolvedValueOnce(friend());
+    mockedListGatherings.mockResolvedValueOnce([
+      gathering({ id: 5, gathering_type_id: 1, date: '2026-08-07', location: 'OUR_PLACE', notes: null }),
+    ]);
+    mockedUpdateGathering.mockResolvedValueOnce(gathering({ id: 5, location: 'OUTSIDE' }));
+    const { navigation } = await renderScreen();
+    await screen.findByText('Dan');
+    await fireEvent.press(screen.getByTestId('edit-gathering-5'));
+    await screen.findByText('Edit gathering');
+
+    // Act
+    await fireEvent.press(screen.getByText('Outside'));
+    await fireEvent.press(screen.getByTestId('log-gathering-submit'));
+
+    // Assert
+    await waitFor(() => expect(mockedUpdateGathering).toHaveBeenCalledTimes(1));
+    expect(mockedUpdateGathering).toHaveBeenCalledWith(1, 5, expect.objectContaining({ location: 'OUTSIDE' }));
+    expect(mockedLogGathering).not.toHaveBeenCalled();
+    expect(navigation.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  test('editing_a_past_gathering__tap_cancel_edit__returns_to_the_log_a_gathering_form', async () => {
+    // Arrange
+    mockedGetFriend.mockResolvedValueOnce(friend());
+    mockedListGatherings.mockResolvedValueOnce([
+      gathering({ id: 5, gathering_type_id: 1, date: '2026-08-07', location: 'OUR_PLACE', notes: 'Something' }),
+    ]);
+    await renderScreen();
+    await screen.findByText('Dan');
+    await fireEvent.press(screen.getByTestId('edit-gathering-5'));
+    await screen.findByText('Edit gathering');
+
+    // Act
+    await fireEvent.press(screen.getByTestId('log-gathering-cancel-edit'));
+
+    // Assert
+    expect(await screen.findByText('Log a gathering')).toBeTruthy();
+    expect(screen.getByText('Save')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Anything worth remembering about this one').props.value).toBe('');
+  });
+
+  test('updateGathering_rejects_with_api_error__shows_its_detail', async () => {
+    // Arrange
+    mockedGetFriend.mockResolvedValueOnce(friend());
+    mockedListGatherings.mockResolvedValueOnce([
+      gathering({ id: 5, gathering_type_id: 1, date: '2026-08-07', location: 'OUR_PLACE' }),
+    ]);
+    mockedUpdateGathering.mockRejectedValueOnce(new ApiError(500, 'update failed'));
+    await renderScreen();
+    await screen.findByText('Dan');
+    await fireEvent.press(screen.getByTestId('edit-gathering-5'));
+    await screen.findByText('Edit gathering');
+
+    // Act
+    await fireEvent.press(screen.getByTestId('log-gathering-submit'));
+
+    // Assert
+    expect(await screen.findByText('update failed')).toBeTruthy();
   });
 });
